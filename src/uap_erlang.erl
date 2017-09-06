@@ -46,7 +46,23 @@ parse2(_RE, A = {_UA, [Family|_]}) when Family =/= "Other" ->
 parse2(RE = #uap_re{ re = MP }, A = {UA, _Match}) ->
 	parse3(RE, A, re:run(UA, MP, [{capture,all_but_first,list}])).
 
-parse3(#uap_re{ replace = _Replace }, {UA, _Match}, {match, Captured}) ->
-	{UA, Captured};
+parse3(#uap_re{ replace = Replace }, {UA, _Match}, {match, Captured}) ->
+	Replace2 = lists:zip(Replace, lists:seq(1, length(Replace))),
+	Match = lists:map(fun(X) -> replace(X, Captured) end, Replace2),
+	{UA, Match};
 parse3(_RE, A, nomatch) ->
 	A.
+
+replace({undefined, N}, Captured) when N > length(Captured) ->
+	undefined;
+replace({undefined, N}, Captured) ->
+	lists:nth(N, Captured);
+replace({R, _N}, Captured) ->
+	replace2(R, Captured, []).
+
+replace2([], _Captured, RN) ->
+	RN;
+replace2(["$",X|R], Captured, RN) when X >= $1, X =< $9 ->
+	replace2(R, Captured, RN ++ lists:nth(X - $0, Captured));
+replace2([X|R], Captured, RN) ->
+	replace2(R, Captured, RN ++ [X]).

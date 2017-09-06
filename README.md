@@ -3,9 +3,10 @@ ua-parser Erlang Library for the [uap-core](https://github.com/ua-parser/uap-cor
 ## Related Links
 
  * [uap-core](https://github.com/ua-parser/uap-core)
+ * [ua-parser Specification](https://github.com/ua-parser/uap-core/blob/master/docs/specification.md)
 
 # Preflight
 
 Get a copy of [`regexs.yaml`](https://github.com/ua-parser/uap-core/blob/master/regexes.yaml) with:
 
-    curl -f -L https://raw.githubusercontent.com/ua-parser/uap-core/master/regexes.yaml
+    make regexs.yaml

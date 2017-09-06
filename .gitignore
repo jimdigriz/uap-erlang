@@ -2,3 +2,7 @@
 !.gitignore
 
 regexes.yaml
+*.d
+erl_crash.dump
+ebin
+deps

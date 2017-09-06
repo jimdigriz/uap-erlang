@@ -39,7 +39,7 @@ parse(UA, {?MODULE, UAP}) when is_list(UA) ->
 		{UA, Match} = lists:foldl(fun parse2/2, {UA, ["Other"]}, X),
 		Match
 	end, UAP),
-	lists:zip([ua, os, device], Results).
+	lists:map(fun parse4/1, lists:zip([ua, os, device], Results)).
 
 parse2(_RE, A = {_UA, [Family|_]}) when Family =/= "Other" ->
 	A;
@@ -52,6 +52,16 @@ parse3(#uap_re{ replace = Replace }, {UA, _Match}, {match, Captured}) ->
 	{UA, Match};
 parse3(_RE, A, nomatch) ->
 	A.
+
+parse4({ua, L}) ->
+	L2 = L ++ lists:duplicate(size(#uap_ua{}) - 1 - length(L), undefined),
+	list_to_tuple([uap_ua|L2]);
+parse4({os, L}) ->
+	L2 = L ++ lists:duplicate(size(#uap_os{}) - 1 - length(L), undefined),
+	list_to_tuple([uap_os|L2]);
+parse4({device, L}) ->
+	L2 = L ++ lists:duplicate(size(#uap_device{}) - 1 - length(L), undefined),
+	list_to_tuple([uap_device|L2]).
 
 replace({undefined, N}, Captured) when N > length(Captured) ->
 	undefined;

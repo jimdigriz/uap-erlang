@@ -74,9 +74,7 @@ cache(UA, O, Result, CacheSize, #state{ cache_size = X }) when X == unlimited; C
 	true = ets:insert(?MODULE, {{O,UA},Result}),
 	ok;
 cache(UA, O, Result, CacheSize, State) ->
-	true = ets:safe_fixtable(?MODULE, true),
 	true = ets:delete(?MODULE, rkey(CacheSize)),
-	true = ets:safe_fixtable(?MODULE, false),
 	cache(UA, O, Result, CacheSize - 1, State).
 
 % http://erlang.org/pipermail/erlang-questions/2010-August/053051.html

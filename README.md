@@ -32,7 +32,7 @@ Get a copy of [`regexs.yaml`](https://github.com/ua-parser/uap-core/blob/master/
 
 ### `load({file | string, list()}) -> uap()`
 
-Loads in YAML in the [expected format](https://github.com/ua-parser/uap-core/blob/master/docs/specification.md) from either a file/path or in-memory string.
+Loads in YAML in the [expected format](https://github.com/ua-parser/uap-core/blob/master/docs/specification.md) from either a provided filepath or in-memory string.
 
 ### `parse(UA, UAP) -> [uap_ua(), uap_os(), uap_device()]`
 

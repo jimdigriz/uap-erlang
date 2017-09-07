@@ -8,7 +8,7 @@
 -type uap_ua() :: #uap_ua{}.
 
 -record(uap_os, {
-	os		:: string(),
+	family		:: string(),
 	major		:: string(),
 	minor		:: string(),
 	patch		:: string(),

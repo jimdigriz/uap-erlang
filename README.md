@@ -31,7 +31,7 @@ From a `make all shell` you should be able to just run:
     
     [#uap_ua{family = "Firefox",major = "55",minor = "0",
              patch = undefined},
-     #uap_os{os = "Linux",major = undefined,minor = undefined,
+     #uap_os{family = "Linux",major = undefined,minor = undefined,
              patch = undefined,patch_minor = undefined},
      #uap_device{family = "Other",brand = undefined,
                  model = undefined}]

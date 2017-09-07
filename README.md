@@ -8,8 +8,6 @@ ua-parser Erlang Library for the [uap-core](https://github.com/ua-parser/uap-cor
 ## TODO
 
  * fix/investigate why the device tests fail (UA and OS are fine though)
- * application
- * fix cache so that it evicts a random entry, current it is biased
 
 # Preflight
 

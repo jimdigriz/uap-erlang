@@ -74,8 +74,15 @@ cache(UA, O, Result, CacheSize, #state{ cache_size = X }) when X == unlimited; C
 	true = ets:insert(?MODULE, {{O,UA},Result}),
 	ok;
 cache(UA, O, Result, CacheSize, State) ->
-	true = ets:delete(?MODULE, ets:first(?MODULE)),
+	true = ets:safe_fixtable(?MODULE, true),
+	true = ets:delete(?MODULE, rkey(CacheSize)),
+	true = ets:safe_fixtable(?MODULE, false),
 	cache(UA, O, Result, CacheSize - 1, State).
+
+% http://erlang.org/pipermail/erlang-questions/2010-August/053051.html
+rkey(CacheSize) -> rkey(rand:uniform(CacheSize), ets:first(?MODULE)).
+rkey(0, K) -> K;
+rkey(N, K) -> rkey(N - 1, ets:next(K)).
 
 parse2(UA, O) ->
 	case ets:lookup(?MODULE, {[O],UA}) of

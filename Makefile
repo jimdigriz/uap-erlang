@@ -1,6 +1,6 @@
 PROJECT = uap
 PROJECT_DESCRIPTION = ua-parser Erlang Library for the uap-core project
-PROJECT_VERSION = 0.0.1
+PROJECT_VERSION = 0.1.0
 
 DEPS = yamerl
 

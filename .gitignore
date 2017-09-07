@@ -1,7 +1,7 @@
 .*
 !.gitignore
+!.gitattributes
 
-erlang.mk -diff
 regexes.yaml
 test/uap_SUITE_data
 *.d

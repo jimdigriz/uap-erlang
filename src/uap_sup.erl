@@ -8,5 +8,5 @@ start_link() ->
 	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
-	Procs = [],
-	{ok, {{one_for_one, 1, 5}, Procs}}.
+	Procs = [#{ id => uap_server, start => {uap_server,start_link,[]} }],
+	{ok, {#{}, Procs}}.

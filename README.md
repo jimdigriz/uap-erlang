@@ -25,7 +25,7 @@ From a `make all shell` you should be able to just run:
     application:start(yamerl),
     rr(uap),
     f(),
-    UAP = uap:load({file,"/usr/src/uap-erlang/regexes.yaml"}),
+    UAP = uap:load({file,"regexes.yaml"}),
     UA = "Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0",
     uap:parse(UA, UAP).
     

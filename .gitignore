@@ -3,6 +3,8 @@
 
 *.yaml
 *.d
+*.beam
 erl_crash.dump
 ebin
 deps
+logs

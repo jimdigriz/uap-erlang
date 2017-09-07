@@ -5,7 +5,9 @@
 -export([stop/1]).
 
 start(_Type, Args) ->
-	uap_sup:start_link(Args).
+	{ok, Priv} = application:get_env(uap,priv),
+	{ok, File} = application:get_env(uap,file),
+	uap_sup:start_link([{priv,Priv},{file,File}|Args]).
 
 stop(_State) ->
 	ok.

@@ -29,7 +29,7 @@ state({Source, Pointer}) when (Source == file orelse Source == string), is_list(
 		Y = proplists:get_value(K, YAML),
 		state2(F, Y)
 	end, ?UAP_MAP),
-	list_to_tuple([uap|UAP]).
+	{ok, list_to_tuple([uap|UAP])}.
 
 state2(Fields, REs) ->
 	lists:map(fun(PL) -> state3(Fields, PL) end, REs).

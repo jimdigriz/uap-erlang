@@ -19,12 +19,14 @@ Get a copy of [`regexs.yaml`](https://github.com/ua-parser/uap-core/blob/master/
 
 # Usage
 
+## Library
+
 From a `make all shell` you should be able to just run:
 
     application:start(yamerl),
     rr(uap),
     f(),
-    UAP = uap:state({file,"regexes.yaml"}),
+    {ok, UAP} = uap:state({file,"regexes.yaml"}),
     UA = "Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0",
     uap:parse(UA, UAP).
     
@@ -36,6 +38,28 @@ From a `make all shell` you should be able to just run:
                  model = undefined}]
 
 The record is populated by the same format as the input type of your User-Agent, either a string or binary.
+
+## Standalone Server
+
+    {ok,_} = uap_server:start([{priv,APP},{file,"regexes.yaml"}]).
+    uap_server:parse(UA, [os]).
+
+Where `APP` is the namespace (defaults to `uap`) of the `priv` directory you have put the `regexes.yaml` file.
+
+## Application
+
+Add to your `rel/sys.config` so that when the application (re)starts it knows how to build its internal state:
+
+    {uap, [{priv,APP},{file,"regexes.yaml"}]}
+
+Now just add to the `applications` section of your `APP.app.src` file `uap`.
+
+### `erlang.mk`
+
+Add to your `Makefile`:
+
+    DEPS += uap
+    dep_uap = git https://gitlab.com/jimdigriz/uap-erlang.git master
 
 # API
 

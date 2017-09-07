@@ -25,8 +25,10 @@ start_link(Args) ->
 %% gen_server.
 
 init(Args) ->
-	io:format("~p~n", [Args]),
-	{ok, #state{}}.
+	Priv = proplists:get_value(priv, Args, uap),
+	File = proplists:get_value(file, Args),
+	{ok, UAP} = uap:state({file,filename:join([code:priv_dir(Priv),File])}),
+	{ok, #state{ uap = UAP }}.
 
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.

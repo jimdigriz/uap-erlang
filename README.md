@@ -7,7 +7,6 @@ ua-parser Erlang Library for the [uap-core](https://github.com/ua-parser/uap-cor
 
 ## TODO
 
- * validate against test data
  * handle input of binary UA
  * application
  * cache

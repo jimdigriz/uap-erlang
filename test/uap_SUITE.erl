@@ -5,9 +5,11 @@
 
 -export([all/0, init_per_testcase/2]).
 -export([ua/1]).
+-export([os/1]).
+-export([device/1]).
 
 all() ->
-	[ua].
+	[ua,os,device].
 
 init_per_testcase(X, Config) ->
 	application:start(yamerl),
@@ -38,6 +40,7 @@ device(Config) ->
 %%
 
 -define(EXPECTED(X), null2undefined(proplists:get_value(??X, Test))).
+-define(PASS(X), Pass = X == Expected, case Pass of true -> ct:log(info, ?STD_IMPORTANCE, "success: ~p", [X]); false -> ct:log(error, ?HI_IMPORTANCE, "failed: ~p (expected: ~p)", [X, Expected]) end, Pass).
 
 null2undefined(null) -> undefined;
 null2undefined(X) -> X.
@@ -52,13 +55,7 @@ ua2(UAP, Test) ->
 		minor		= ?EXPECTED(minor),
 		patch		= ?EXPECTED(patch)
 	},
-	case UAP_UA == Expected of
-		true ->
-			true;
-		false ->
-			ct:log(error, ?HI_IMPORTANCE, "expected: ~p, got: ~p", [Expected, UAP_UA]),
-			false
-	end.
+	?PASS(UAP_UA).
 
 os2(UAP, Test) ->
 	UA = proplists:get_value("user_agent_string", Test),
@@ -71,13 +68,7 @@ os2(UAP, Test) ->
 		patch		= ?EXPECTED(patch),
 		patch_minor	= ?EXPECTED(patch_minor)
 	},
-	case UAP_OS == Expected of
-		true ->
-			true;
-		false ->
-			ct:log(error, ?HI_IMPORTANCE, "expected: ~p, got: ~p", [Expected, UAP_OS]),
-			false
-	end.
+	?PASS(UAP_OS).
 
 device2(UAP, Test) ->
 	UA = proplists:get_value("user_agent_string", Test),
@@ -88,10 +79,4 @@ device2(UAP, Test) ->
 		brand		= ?EXPECTED(brand),
 		model		= ?EXPECTED(model)
 	},
-	case UAP_Device == Expected of
-		true ->
-			true;
-		false ->
-			ct:log(error, ?HI_IMPORTANCE, "expected: ~p, got: ~p", [Expected, UAP_Device]),
-			false
-	end.
+	?PASS(UAP_Device).

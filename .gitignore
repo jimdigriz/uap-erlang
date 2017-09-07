@@ -1,7 +1,8 @@
 .*
 !.gitignore
 
-*.yaml
+regexes.yaml
+test/uap_SUITE_data
 *.d
 *.beam
 erl_crash.dump

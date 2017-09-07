@@ -36,7 +36,14 @@ load2(Fields, REs) ->
 
 load3(Fields, PL) ->
 	RE = proplists:get_value("regex", PL),
-	{ok, MP} = re:compile(RE),
+	Opts = case proplists:get_value("regex_flag", PL) of
+		undefined ->
+			[];
+		"i" ->
+			[caseless]
+	end,
+	RE2 = lists:foldr(fun ($\\, A) -> [$\\,$\\|A]; (X, A) -> [X|A] end, RE),
+	{ok, MP} = re:compile(RE2, Opts),
 	Replace = lists:map(fun(F) -> proplists:get_value(F, PL) end, Fields),
 	#uap_re{ re = MP, replace = Replace }.
 
@@ -54,6 +61,7 @@ parse2(UA, Default, [RE = #uap_re{ re = MP }|REs]) ->
 	parse3(UA, Default, REs, RE, Match).
 
 parse3(_UA, _Default, _REs, #uap_re{ replace = Replace }, {match,Captured}) ->
+io:format("~p~n", [{Captured, Replace}]),
 	Replace2 = lists:zip(Replace, lists:seq(1, length(Replace))),
 	lists:map(fun(X) -> replace(X, Captured) end, Replace2);
 parse3(UA, Default, REs, _RE, nomatch) ->
@@ -78,8 +86,9 @@ replace({R, _N}, Captured) ->
 	replace2(R, Captured, []).
 
 replace2([], _Captured, RN) ->
-	RN;
-replace2(["$",X|R], Captured, RN) when X >= $1, X =< $9 ->
-	replace2(R, Captured, RN ++ lists:nth(list_to_integer(X), Captured));
+	RN2 = lists:dropwhile(fun(X) -> X < $! end, RN),
+	lists:reverse(lists:dropwhile(fun(X) -> X < $! end, lists:reverse(RN2)));
+replace2([$$,X|R], Captured, RN) when X >= $1, X =< $9 ->
+	replace2(R, Captured, RN ++ lists:nth(X - $0, Captured));
 replace2([X|R], Captured, RN) ->
 	replace2(R, Captured, RN ++ [X]).

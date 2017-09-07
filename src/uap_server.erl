@@ -82,7 +82,7 @@ cache(UA, O, Result, CacheSize, State) ->
 % http://erlang.org/pipermail/erlang-questions/2010-August/053051.html
 rkey(CacheSize) -> rkey(rand:uniform(CacheSize), ets:first(?MODULE)).
 rkey(0, K) -> K;
-rkey(N, K) -> rkey(N - 1, ets:next(K)).
+rkey(N, K) -> rkey(N - 1, ets:next(?MODULE, K)).
 
 parse2(UA, O) ->
 	case ets:lookup(?MODULE, {[O],UA}) of

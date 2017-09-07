@@ -40,9 +40,9 @@ load3(Fields, PL) ->
 	Replace = lists:map(fun(F) -> proplists:get_value(F, PL) end, Fields),
 	#uap_re{ re = MP, replace = Replace }.
 
-parse(UA, UAP = #uap{}) when is_list(UA) ->
+parse(UA, UAP) when is_list(UA), is_record(UAP, uap) ->
 	parse(UA, UAP, [ua,os,device]).
-parse(UA, UAP = #uap{}, Order) when is_list(UA), is_list(Order) ->
+parse(UA, UAP, Order) when is_list(UA), is_record(UAP, uap), is_list(Order) ->
 	Map = lists:map(fun(X) -> element(X, UAP) end, lists:map(fun uap_pos/1, Order)),
 	Results = lists:map(fun(X) -> parse2(UA, ["Other"], X) end, Map),
 	lists:map(fun parse4/1, lists:zip(Order, Results)).

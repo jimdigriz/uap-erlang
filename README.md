@@ -38,6 +38,6 @@ Loads in YAML in the [expected format](https://github.com/ua-parser/uap-core/blo
 
 Same as `parse(UA, UAP, [ua, os, device])`.
 
-### `parse(UA, uap(), Order)` -> [uap_ua() | uap_os() | uap_device()]`
+### `parse(UA, uap(), Order) -> [uap_ua() | uap_os() | uap_device()]`
 
 Parses the User-Agent in passed in as the string `UA`.

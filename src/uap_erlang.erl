@@ -1,29 +1,35 @@
 -module(uap_erlang).
 
 -export([load/1]).
--export([parse/2]).
+-export([parse/2, parse/3]).
 
 -include("uap.hrl").
+
+-record(uap, {
+	ua	:: uap_re(),
+	os	:: uap_re(),
+	device	:: uap_re()
+}).
 
 -record(uap_re, {
 	re	:: tuple(),
 	replace	:: list()
 }).
 
+-type uap_re() :: #uap_re{}.
+
 -define(UAP_FIELDS_UA, ["family_replacement", "v1_replacement", "v2_replacement", "v3_replacement"]).
 -define(UAP_FIELDS_OS, ["os_replacement", "os_v1_replacement", "os_v2_replacement", "os_v3_replacement", "os_v4_replacement"]).
 -define(UAP_FIELDS_DEVICE, ["device_replacement", "brand_replacement", "model_replacement"]).
+-define(UAP_MAP, [{"user_agent_parsers",?UAP_FIELDS_UA},{"os_parsers",?UAP_FIELDS_OS},{"device_parsers",?UAP_FIELDS_DEVICE}]).
 
 load({Source, Pointer}) when Source == file; Source == string ->
 	[YAML] = yamerl_constr:Source(Pointer),
-	UAP = lists:map(fun load/1, YAML),
-	{?MODULE, UAP};
-load({"user_agent_parsers", REs}) ->
-	load2(?UAP_FIELDS_UA, REs);
-load({"os_parsers", REs}) ->
-	load2(?UAP_FIELDS_OS, REs);
-load({"device_parsers", REs}) ->
-	load2(?UAP_FIELDS_DEVICE, REs).
+	UAP = lists:map(fun({K,F}) ->
+		Y = proplists:get_value(K, YAML),
+		load2(F, Y)
+	end, ?UAP_MAP),
+	list_to_tuple([uap|UAP]).
 
 load2(Fields, REs) ->
 	lists:map(fun(PL) -> load3(Fields, PL) end, REs).
@@ -31,12 +37,15 @@ load2(Fields, REs) ->
 load3(Fields, PL) ->
 	RE = proplists:get_value("regex", PL),
 	{ok, MP} = re:compile(RE),
-	Replace = lists:map(fun(Y) -> proplists:get_value(Y, PL) end, Fields),
+	Replace = lists:map(fun(F) -> proplists:get_value(F, PL) end, Fields),
 	#uap_re{ re = MP, replace = Replace }.
 
-parse(UA, {?MODULE, UAP}) when is_list(UA) ->
-	Results = lists:map(fun(X) -> parse2(UA, ["Other"], X) end, UAP),
-	lists:map(fun parse4/1, lists:zip([ua, os, device], Results)).
+parse(UA, UAP = #uap{}) when is_list(UA) ->
+	parse(UA, UAP, [ua,os,device]).
+parse(UA, UAP = #uap{}, Order) when is_list(UA), is_list(Order) ->
+	Map = lists:map(fun(X) -> element(X, UAP) end, lists:map(fun uap_pos/1, Order)),
+	Results = lists:map(fun(X) -> parse2(UA, ["Other"], X) end, Map),
+	lists:map(fun parse4/1, lists:zip(Order, Results)).
 
 parse2(_UA, Default, []) ->
 	Default;
@@ -59,6 +68,10 @@ parse4({os, L}) ->
 parse4({device, L}) ->
 	L2 = L ++ lists:duplicate(size(#uap_device{}) - 1 - length(L), undefined),
 	list_to_tuple([uap_device|L2]).
+
+uap_pos(ua) -> #uap.ua;
+uap_pos(os) -> #uap.os;
+uap_pos(device) -> #uap.device.
 
 replace({undefined, N}, Captured) when N > length(Captured) ->
 	undefined;

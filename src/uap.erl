@@ -85,8 +85,7 @@ replace({R, _N}, Captured) ->
 	replace2(R, Captured, []).
 
 replace2([], _Captured, RN) ->
-	RN2 = lists:dropwhile(fun(X) -> X < $! end, RN),
-	lists:reverse(lists:dropwhile(fun(X) -> X < $! end, lists:reverse(RN2)));
+	string:trim(RN);
 replace2([$$,X|R], Captured, RN) when X >= $1, X =< $9 ->
 	replace2(R, Captured, RN ++ lists:nth(X - $0, Captured));
 replace2([X|R], Captured, RN) ->

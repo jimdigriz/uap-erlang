@@ -20,6 +20,8 @@ Get a copy of [`regexs.yaml`](https://github.com/ua-parser/uap-core/blob/master/
 
 # Usage
 
+From a `make all shell` you should be able to just run:
+
     application:start(yamerl),
     rr(uap),
     f(),

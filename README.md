@@ -25,7 +25,7 @@ From a `make all shell` you should be able to just run:
     application:start(yamerl),
     rr(uap),
     f(),
-    UAP = uap:load({file,"regexes.yaml"}),
+    UAP = uap:state({file,"regexes.yaml"}),
     UA = "Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0",
     uap:parse(UA, UAP).
     
@@ -40,7 +40,7 @@ From a `make all shell` you should be able to just run:
 
 ## `uap` library
 
-### `load({file | string, list()}) -> uap()`
+### `state({file | string, list()}) -> uap()`
 
 Loads in YAML in the [expected format](https://github.com/ua-parser/uap-core/blob/master/docs/specification.md) from either a provided filepath or in-memory string.
 

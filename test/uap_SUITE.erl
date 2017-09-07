@@ -14,7 +14,7 @@ all() ->
 init_per_testcase(X, Config) ->
 	application:start(yamerl),
 	DataDir = ?config(data_dir, Config),
-	UAP = uap:load({file,DataDir ++ "/regexes.yaml"}),
+	UAP = uap:state({file,DataDir ++ "/regexes.yaml"}),
 	[YAML] = yamerl_constr:file(DataDir ++ atom_to_list(X) ++ ".yaml"),
 	Tests = proplists:get_value("test_cases", YAML),
 	[{uap,UAP},{tests,Tests}|Config].

@@ -1,6 +1,6 @@
 -module(uap).
 
--export([load/1]).
+-export([state/1]).
 -export([parse/2, parse/3]).
 
 -include("uap.hrl").
@@ -23,18 +23,18 @@
 -define(UAP_FIELDS_DEVICE, ["device_replacement", "brand_replacement", "model_replacement"]).
 -define(UAP_MAP, [{"user_agent_parsers",?UAP_FIELDS_UA},{"os_parsers",?UAP_FIELDS_OS},{"device_parsers",?UAP_FIELDS_DEVICE}]).
 
-load({Source, Pointer}) when (Source == file orelse Source == string), is_list(Pointer) ->
+state({Source, Pointer}) when (Source == file orelse Source == string), is_list(Pointer) ->
 	[YAML] = yamerl_constr:Source(Pointer),
 	UAP = lists:map(fun({K,F}) ->
 		Y = proplists:get_value(K, YAML),
-		load2(F, Y)
+		state2(F, Y)
 	end, ?UAP_MAP),
 	list_to_tuple([uap|UAP]).
 
-load2(Fields, REs) ->
-	lists:map(fun(PL) -> load3(Fields, PL) end, REs).
+state2(Fields, REs) ->
+	lists:map(fun(PL) -> state3(Fields, PL) end, REs).
 
-load3(Fields, PL) ->
+state3(Fields, PL) ->
 	RE = proplists:get_value("regex", PL),
 	Opts = case proplists:get_value("regex_flag", PL) of
 		undefined ->

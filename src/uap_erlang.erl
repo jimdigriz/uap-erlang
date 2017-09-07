@@ -60,7 +60,7 @@ parse3(UA, Default, REs, _RE, nomatch) ->
 	parse2(UA, Default, REs).
 
 -define(PARSE4(X,Y), parse4({X,L}) ->
-	L2 = L ++ lists:duplicate(size(#Y{}) - 1 - length(L), undefined),
+	L2 = L ++ lists:duplicate(record_info(size, Y) - 1 - length(L), undefined),
 	list_to_tuple([Y|L2])).
 ?PARSE4(ua, uap_ua);
 ?PARSE4(os, uap_os);

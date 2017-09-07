@@ -46,8 +46,14 @@ state3(Fields, PL) ->
 	Replace = lists:map(fun(F) -> proplists:get_value(F, PL) end, Fields),
 	#uap_re{ re = MP, replace = Replace }.
 
-parse(UA, UAP) when is_list(UA), is_record(UAP, uap) ->
+parse(UA, UAP) when (is_list(UA) orelse is_binary(UA)), is_record(UAP, uap) ->
 	parse(UA, UAP, [ua,os,device]).
+parse(UA, UAP, Order) when is_binary(UA), is_record(UAP, uap), is_list(Order) ->
+	lists:map(fun(X) ->
+		lists:foldl(fun(I, E) ->
+			setelement(I, E, str2bin(element(I, E)))
+		end, X, lists:seq(2, size(X)))
+	end, parse(binary_to_list(UA), UAP, Order));
 parse(UA, UAP, Order) when is_list(UA), is_record(UAP, uap), is_list(Order) ->
 	Map = lists:map(fun(X) -> element(X, UAP) end, lists:map(fun uap_pos/1, Order)),
 	Results = lists:map(fun(X) -> parse2(UA, ["Other"], X) end, Map),
@@ -72,6 +78,9 @@ parse3(UA, Default, REs, _RE, nomatch) ->
 ?PARSE4(ua, uap_ua);
 ?PARSE4(os, uap_os);
 ?PARSE4(device, uap_device).
+
+str2bin(X) when is_list(X) -> list_to_binary(X);
+str2bin(X) -> X.
 
 uap_pos(ua) -> #uap.ua;
 uap_pos(os) -> #uap.os;

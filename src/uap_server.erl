@@ -3,6 +3,7 @@
 
 %% API.
 -export([start_link/1]).
+-export([parse/1, parse/2]).
 
 %% gen_server.
 -export([init/1]).
@@ -11,6 +12,8 @@
 -export([handle_info/2]).
 -export([terminate/2]).
 -export([code_change/3]).
+
+-include("uap.hrl").
 
 -record(state, {
 	uap
@@ -22,14 +25,24 @@
 start_link(Args) ->
 	gen_server:start_link({local,?MODULE}, ?MODULE, Args, []).
 
+-spec parse(list() | binary()) -> list(uap_ua() | uap_os() | uap_device()).
+parse(UA) when is_list(UA); is_binary(UA) ->
+	parse(UA, [ua,os,device]).
+-spec parse(list() | binary(), list(ua | os | device)) -> list(uap_ua() | uap_os() | uap_device()).
+parse(UA, Order) when (is_list(UA) orelse is_binary(UA)), is_list(Order) ->
+	gen_server:call(?MODULE, {parse, UA, Order}).
+
 %% gen_server.
 
 init(Args) ->
 	Priv = proplists:get_value(priv, Args, uap),
 	File = proplists:get_value(file, Args),
-	{ok, UAP} = uap:state({file,filename:join([code:priv_dir(Priv),File])}),
+	{ok, UAP} = uap:state({file,filename:join([code:priv_dir(Priv), File])}),
 	{ok, #state{ uap = UAP }}.
 
+handle_call({parse, UA, Order}, _From, State = #state{ uap = UAP }) ->
+	Result = uap:parse(UA, UAP, Order),
+	{reply, Result, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 

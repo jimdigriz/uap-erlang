@@ -9,7 +9,7 @@ ua-parser Erlang Library for the [uap-core](https://github.com/ua-parser/uap-cor
 
  * fix/investigate why the device tests fail (UA and OS are fine though)
  * application
- * cache
+ * fix cache so that it evicts a random entry, current it is biased
 
 # Preflight
 
@@ -41,16 +41,20 @@ The record is populated by the same format as the input type of your User-Agent,
 
 ## Standalone Server
 
-    {ok,_} = uap_server:start([{priv,APP},{file,"regexes.yaml"}]).
+    {ok,_} = uap_server:start([{priv,myapp}]).
     uap_server:parse(UA, [os]).
 
-Where `APP` is the namespace (defaults to `uap`) of the `priv` directory you have put the `regexes.yaml` file.
+Supported configuration variables are:
+
+ * **`priv` (default: `uap`):** application name for the `priv` directory where `regexes.yaml` is located
+ * **`file` (default: `regexes.yaml`):** name of the regexes file to load
+ * **`cache` (default: 1000):** number of entries for the lookup cache (can also be `0` for disabled and `unlimited`)
 
 ## Application
 
 Add to your `rel/sys.config` so that when the application (re)starts it knows how to build its internal state:
 
-    {uap, [{priv,APP},{file,"regexes.yaml"}]}
+    {uap, [{priv,APP}]}
 
 Now just add to the `applications` section of your `APP.app.src` file `uap`.
 

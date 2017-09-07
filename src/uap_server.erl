@@ -16,8 +16,13 @@
 -include("uap.hrl").
 
 -record(state, {
-	uap
+	uap,
+	cache_size	:: unlimited | non_neg_integer()
 }).
+
+-define(DEFAULT_PRIV, uap).
+-define(DEFAULT_FILE, "regexes.yaml").
+-define(DEFAULT_CACHE, 1000).
 
 %% API.
 
@@ -30,18 +35,21 @@ parse(UA) when is_list(UA); is_binary(UA) ->
 	parse(UA, [ua,os,device]).
 -spec parse(list() | binary(), list(ua | os | device)) -> list(uap_ua() | uap_os() | uap_device()).
 parse(UA, Order) when (is_list(UA) orelse is_binary(UA)), is_list(Order) ->
-	gen_server:call(?MODULE, {parse, UA, Order}).
+	lists:map(fun(X) -> parse2(UA, X) end, Order).
 
 %% gen_server.
 
 init(Args) ->
-	Priv = proplists:get_value(priv, Args, uap),
-	File = proplists:get_value(file, Args),
+	Priv = proplists:get_value(priv, Args, ?DEFAULT_PRIV),
+	File = proplists:get_value(file, Args, ?DEFAULT_FILE),
+	CacheSize = proplists:get_value(cache, Args, ?DEFAULT_CACHE),
 	{ok, UAP} = uap:state({file,filename:join([code:priv_dir(Priv), File])}),
-	{ok, #state{ uap = UAP }}.
+	?MODULE = ets:new(?MODULE, [named_table,{read_concurrency,true}]),
+	{ok, #state{ uap = UAP, cache_size = CacheSize }}.
 
 handle_call({parse, UA, Order}, _From, State = #state{ uap = UAP }) ->
 	Result = uap:parse(UA, UAP, Order),
+	ok = cache(UA, Order, Result, ets:info(?MODULE, size), State),
 	{reply, Result, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
@@ -57,3 +65,23 @@ terminate(_Reason, _State) ->
 
 code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
+
+%%
+
+cache(_UA, _O, _Result, _CacheSize, #state{ cache_size = 0 }) ->
+	ok;
+cache(UA, O, Result, CacheSize, #state{ cache_size = X }) when X == unlimited; CacheSize < X ->
+	true = ets:insert(?MODULE, {{O,UA},Result}),
+	ok;
+cache(UA, O, Result, CacheSize, State) ->
+	true = ets:delete(?MODULE, ets:first(?MODULE)),
+	cache(UA, O, Result, CacheSize - 1, State).
+
+parse2(UA, O) ->
+	case ets:lookup(?MODULE, {[O],UA}) of
+		[] ->
+			[X] = gen_server:call(?MODULE, {parse,UA,[O]}),
+			X;
+		[{_,[X]}] ->
+			X
+	end.

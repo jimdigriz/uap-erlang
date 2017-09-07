@@ -1,7 +1,7 @@
 .*
 !.gitignore
 
-regexes.yaml
+*.yaml
 *.d
 erl_crash.dump
 ebin

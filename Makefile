@@ -10,7 +10,6 @@ include erlang.mk
 regexes.yaml:
 	curl -f --compressed -L -o $@ https://raw.githubusercontent.com/ua-parser/uap-core/master/regexes.yaml
 
-.PHONY: fetch_test_data
-fetch_test_data:
-	mkdir -p t/data
-	$(foreach T,ua os device,curl -f --compressed -L -o t/data/$(T).yaml https://raw.githubusercontent.com/ua-parser/uap-core/master/tests/test_$(T).yaml;)
+.PHONY: testdata
+testdata:
+	$(foreach T,ua os device,curl -f --compressed -L -o $(T).yaml https://raw.githubusercontent.com/ua-parser/uap-core/master/tests/test_$(T).yaml;)

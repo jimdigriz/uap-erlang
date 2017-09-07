@@ -34,7 +34,7 @@ From a `make all shell` you should be able to just run:
      #uap_os{os = "Linux",major = undefined,minor = undefined,
              patch = undefined,patch_minor = undefined},
      #uap_device{family = "Other",brand = undefined,
-             model = undefined}]
+                 model = undefined}]
 
 # API
 
@@ -51,3 +51,13 @@ Same as `parse(UA, UAP, [ua, os, device])`.
 ### `parse(UA, uap(), Order) -> [uap_ua() | uap_os() | uap_device()]`
 
 Parses the User-Agent in passed in as the string `UA`.
+
+# Testing
+
+Fetch a copy of the [test data](https://github.com/ua-parser/uap-core/blob/master/tests/):
+
+    make testdata
+
+Now run the tests with:
+
+    make tests

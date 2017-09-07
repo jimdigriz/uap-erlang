@@ -53,21 +53,18 @@ parse2(UA, Default, [RE = #uap_re{ re = MP }|REs]) ->
 	Match = re:run(UA, MP, [{capture,all_but_first,list}]),
 	parse3(UA, Default, REs, RE, Match).
 
-parse3(_UA, _Default, _REs, #uap_re{ replace = Replace }, {match, Captured}) ->
+parse3(_UA, _Default, _REs, #uap_re{ replace = Replace }, {match,Captured}) ->
 	Replace2 = lists:zip(Replace, lists:seq(1, length(Replace))),
 	lists:map(fun(X) -> replace(X, Captured) end, Replace2);
 parse3(UA, Default, REs, _RE, nomatch) ->
 	parse2(UA, Default, REs).
 
-parse4({ua, L}) ->
-	L2 = L ++ lists:duplicate(size(#uap_ua{}) - 1 - length(L), undefined),
-	list_to_tuple([uap_ua|L2]);
-parse4({os, L}) ->
-	L2 = L ++ lists:duplicate(size(#uap_os{}) - 1 - length(L), undefined),
-	list_to_tuple([uap_os|L2]);
-parse4({device, L}) ->
-	L2 = L ++ lists:duplicate(size(#uap_device{}) - 1 - length(L), undefined),
-	list_to_tuple([uap_device|L2]).
+-define(PARSE4(X,Y), parse4({X,L}) ->
+	L2 = L ++ lists:duplicate(size(#Y{}) - 1 - length(L), undefined),
+	list_to_tuple([Y|L2])).
+?PARSE4(ua, uap_ua);
+?PARSE4(os, uap_os);
+?PARSE4(device, uap_device).
 
 uap_pos(ua) -> #uap.ua;
 uap_pos(os) -> #uap.os;

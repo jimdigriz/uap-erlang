@@ -1,4 +1,4 @@
--module(uap_erlang).
+-module(uap).
 
 -export([load/1]).
 -export([parse/2, parse/3]).

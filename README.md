@@ -22,13 +22,13 @@ Get a copy of [`regexs.yaml`](https://github.com/ua-parser/uap-core/blob/master/
 
     application:start(yamerl),
     f(),
-    UAP = uap_erlang:load({file,"/usr/src/uap-erlang/regexes.yaml"}),
+    UAP = uap:load({file,"/usr/src/uap-erlang/regexes.yaml"}),
     UA = "Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0",
-    uap_erlang:parse(UA, UAP).
+    uap:parse(UA, UAP).
 
 # API
 
-## `uap_erlang` library
+## `uap` library
 
 ### `load({file | string, list()}) -> uap()`
 

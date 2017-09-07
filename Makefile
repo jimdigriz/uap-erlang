@@ -1,4 +1,4 @@
-PROJECT = uap_erlang
+PROJECT = uap
 PROJECT_DESCRIPTION = ua-parser Erlang Library for the uap-core project
 PROJECT_VERSION = 0.0.1
 

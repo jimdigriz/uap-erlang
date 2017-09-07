@@ -66,7 +66,6 @@ parse2(UA, Default, [RE = #uap_re{ re = MP }|REs]) ->
 	parse3(UA, Default, REs, RE, Match).
 
 parse3(_UA, _Default, _REs, #uap_re{ replace = Replace }, {match,Captured}) ->
-io:format("~p~n", [{Captured, Replace}]),
 	Replace2 = lists:zip(Replace, lists:seq(1, length(Replace))),
 	lists:map(fun(X) -> replace(X, Captured) end, Replace2);
 parse3(UA, Default, REs, _RE, nomatch) ->

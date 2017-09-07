@@ -21,10 +21,18 @@ Get a copy of [`regexs.yaml`](https://github.com/ua-parser/uap-core/blob/master/
 # Usage
 
     application:start(yamerl),
+    rr(uap),
     f(),
     UAP = uap:load({file,"/usr/src/uap-erlang/regexes.yaml"}),
     UA = "Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0",
     uap:parse(UA, UAP).
+    
+    [#uap_ua{family = "Firefox",major = "55",minor = "0",
+             patch = undefined},
+     #uap_os{os = "Linux",major = undefined,minor = undefined,
+             patch = undefined,patch_minor = undefined},
+     #uap_device{family = "Other",brand = undefined,
+             model = undefined}]
 
 # API
 

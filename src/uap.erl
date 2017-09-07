@@ -42,8 +42,7 @@ load3(Fields, PL) ->
 		"i" ->
 			[caseless]
 	end,
-	RE2 = lists:foldr(fun ($\\, A) -> [$\\,$\\|A]; (X, A) -> [X|A] end, RE),
-	{ok, MP} = re:compile(RE2, Opts),
+	{ok, MP} = re:compile(RE, Opts),
 	Replace = lists:map(fun(F) -> proplists:get_value(F, PL) end, Fields),
 	#uap_re{ re = MP, replace = Replace }.
 

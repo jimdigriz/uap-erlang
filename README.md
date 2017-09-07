@@ -35,6 +35,8 @@ From a `make all shell` you should be able to just run:
      #uap_device{family = "Other",brand = undefined,
                  model = undefined}]
 
+The record is populated by the same format as the input type of your User-Agent, either a string or binary.
+
 # API
 
 ## `uap` library

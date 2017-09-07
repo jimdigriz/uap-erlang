@@ -2,7 +2,7 @@
 -behaviour(gen_server).
 
 %% API.
--export([start_link/0]).
+-export([start_link/1]).
 
 %% gen_server.
 -export([init/1]).
@@ -13,17 +13,19 @@
 -export([code_change/3]).
 
 -record(state, {
+	uap
 }).
 
 %% API.
 
--spec start_link() -> {ok, pid()}.
-start_link() ->
-	gen_server:start_link({local,?MODULE}, ?MODULE, [], []).
+-spec start_link(list()) -> {ok, pid()}.
+start_link(Args) ->
+	gen_server:start_link({local,?MODULE}, ?MODULE, Args, []).
 
 %% gen_server.
 
-init([]) ->
+init(Args) ->
+	io:format("~p~n", [Args]),
 	{ok, #state{}}.
 
 handle_call(_Request, _From, State) ->

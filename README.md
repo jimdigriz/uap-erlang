@@ -1,4 +1,4 @@
-ua-parser Erlang Library for the [uap-core](https://github.com/ua-parser/uap-core) project.
+User-Agent Parser Erlang Library for the [uap-core](https://github.com/ua-parser/uap-core) project.
 
 ## Related Links
 

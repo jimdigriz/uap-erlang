@@ -39,10 +39,12 @@ The record is populated by the same format as the input type of your User-Agent,
 
 ## Standalone Server
 
-    {ok,_} = uap_server:start([{priv,myapp}]).
+    rr(uap).
+    Args = [],	% [{priv,uap},{file,"regexes.yaml"}]
+    {ok,_} = uap_server:start_link(Args).
     uap_server:parse(UA, [os]).
 
-Supported configuration variables are:
+Supported configuration arguments are:
 
  * **`priv` (default: `uap`):** application name for the `priv` directory where `regexes.yaml` is located
  * **`file` (default: `regexes.yaml`):** name of the regexes file to load

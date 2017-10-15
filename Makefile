@@ -8,7 +8,10 @@ CT_SUITES = $(PROJECT)
 
 include erlang.mk
 
-regexes.yaml:
+priv:
+	mkdir -p $@
+
+priv/regexes.yaml: priv
 	curl -f --compressed -L -o $@ https://raw.githubusercontent.com/ua-parser/uap-core/master/regexes.yaml
 
 .PHONY: testdata
@@ -20,8 +23,8 @@ test/uap_SUITE_data:
 .PHONY: testdata_yaml
 testdata_yaml: test/uap_SUITE_data/regexes.yaml test/uap_SUITE_data/ua.yaml test/uap_SUITE_data/os.yaml test/uap_SUITE_data/device.yaml
 
-test/uap_SUITE_data/regexes.yaml: regexes.yaml
-	ln -f -s ../../regexes.yaml $@
+test/uap_SUITE_data/regexes.yaml: priv/regexes.yaml
+	ln -f -s ../../priv/regexes.yaml $@
 
 test/uap_SUITE_data/%.yaml:
 	curl -f --compressed -L -o $@ https://raw.githubusercontent.com/ua-parser/uap-core/master/tests/test_$(notdir $@)

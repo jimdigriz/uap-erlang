@@ -20,6 +20,13 @@
 	cache_size	:: unlimited | non_neg_integer()
 }).
 
+-record(cache, {
+	key,
+	ua,
+	os,
+	device
+}).
+
 -define(DEFAULT_PRIV, uap).
 -define(DEFAULT_FILE, "regexes.yaml").
 -define(DEFAULT_CACHE, 1000).
@@ -28,6 +35,7 @@
 
 -spec start_link(list()) -> {ok, pid()}.
 start_link(Args) ->
+	application:start(yamerl),
 	gen_server:start_link({local,?MODULE}, ?MODULE, Args, []).
 
 -spec parse(list() | binary()) -> list(uap_ua() | uap_os() | uap_device()).
@@ -35,7 +43,7 @@ parse(UA) when is_list(UA); is_binary(UA) ->
 	parse(UA, [ua,os,device]).
 -spec parse(list() | binary(), list(ua | os | device)) -> list(uap_ua() | uap_os() | uap_device()).
 parse(UA, Order) when (is_list(UA) orelse is_binary(UA)), is_list(Order) ->
-	lists:map(fun(X) -> parse2(UA, X) end, Order).
+	parse2(UA, Order).
 
 %% gen_server.
 
@@ -43,13 +51,15 @@ init(Args) ->
 	Priv = proplists:get_value(priv, Args, ?DEFAULT_PRIV),
 	File = proplists:get_value(file, Args, ?DEFAULT_FILE),
 	CacheSize = proplists:get_value(cache, Args, ?DEFAULT_CACHE),
+	ets:new(?MODULE, [named_table,ordered_set,{keypos,#cache.key},{read_concurrency,true}]),
 	{ok, UAP} = uap:state({file,filename:join([code:priv_dir(Priv), File])}),
-	?MODULE = ets:new(?MODULE, [named_table,{read_concurrency,true}]),
 	{ok, #state{ uap = UAP, cache_size = CacheSize }}.
 
 handle_call({parse, UA, Order}, _From, State = #state{ uap = UAP }) ->
 	Result = uap:parse(UA, UAP, Order),
-	ok = cache(UA, Order, Result, ets:info(?MODULE, size), State),
+	Result2 = lists:zip(Order, Result),
+	CacheSize = ets:info(?MODULE, size),
+	ok = cache(UA, Result2, CacheSize, State),
 	{reply, Result, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
@@ -68,25 +78,46 @@ code_change(_OldVsn, State, _Extra) ->
 
 %%
 
-cache(_UA, _O, _Result, _CacheSize, #state{ cache_size = 0 }) ->
+cache(_UA, _Result, _CacheSize, #state{ cache_size = 0 }) ->
 	ok;
-cache(UA, O, Result, CacheSize, #state{ cache_size = X }) when X == unlimited; CacheSize < X ->
-	true = ets:insert(?MODULE, {{O,UA},Result}),
-	ok;
-cache(UA, O, Result, CacheSize, State) ->
-	true = ets:delete(?MODULE, rkey(CacheSize)),
-	cache(UA, O, Result, CacheSize - 1, State).
-
-% http://erlang.org/pipermail/erlang-questions/2010-August/053051.html
-rkey(CacheSize) -> rkey(rand:uniform(CacheSize), ets:first(?MODULE)).
-rkey(0, K) -> K;
-rkey(N, K) -> rkey(N - 1, ets:next(?MODULE, K)).
-
-parse2(UA, O) ->
-	case ets:lookup(?MODULE, {[O],UA}) of
+cache(UA, Result, CacheSize, #state{ cache_size = X }) when X == unlimited; CacheSize < X ->
+	Match = #cache{ key = {'$1',UA}, ua = '_', os = '_', device = '_' },
+	Id = case ets:match(?MODULE, Match) of
 		[] ->
-			[X] = gen_server:call(?MODULE, {parse,UA,[O]}),
-			X;
-		[{_,[X]}] ->
-			X
+			I = erlang:unique_integer([positive]),
+			ets:insert(?MODULE, #cache{ key = {I,UA} }),
+			I;
+		[[I]] ->
+			I
+	end,
+	Result2 = lists:map(fun({O,R}) -> {pos(O), R} end, Result),
+	true = ets:update_element(?MODULE, {Id,UA}, Result2),
+	ok;
+cache(UA, Result, CacheSize, State) ->
+	true = ets:delete(?MODULE, ets:first(?MODULE)),
+	cache(UA, Result, CacheSize - 1, State).
+
+parse2(UA, Order) ->
+	Match = #cache{ key = {'_',UA}, ua = '_', os = '_', device = '_' },
+	{Match2, _} = lists:foldl(fun(O, {M,P}) ->
+		M2 = setelement(pos(O), M, list_to_atom("$" ++ integer_to_list(P))),
+		P2 = P + 1,
+		{M2, P2}
+	end, {Match, 1}, Order),
+	case ets:match(?MODULE, Match2) of
+		[] ->
+			gen_server:call(?MODULE, {parse,UA,Order});
+		[Result] ->
+			Result2 = lists:zip(Order, Result),
+			lists:map(fun
+				({O,undefined}) ->
+					[R] = gen_server:call(?MODULE, {parse,UA,[O]}),
+					R;
+				({_O,R}) ->
+					R
+			end, Result2)
 	end.
+
+pos(ua) -> #cache.ua;
+pos(os) -> #cache.os;
+pos(device) -> #cache.device.

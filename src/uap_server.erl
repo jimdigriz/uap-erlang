@@ -81,7 +81,7 @@ code_change(_OldVsn, State, _Extra) ->
 cache(_UA, _Result, _CacheSize, #state{ cache_size = 0 }) ->
 	ok;
 cache(UA, Result, CacheSize, #state{ cache_size = X }) when X == unlimited; CacheSize < X ->
-	Match = #cache{ key = {'$1',UA}, ua = '_', os = '_', device = '_' },
+	Match = #cache{ key = {'$1',UA}, _ = '_' },
 	Id = case ets:match(?MODULE, Match) of
 		[] ->
 			I = erlang:unique_integer([positive]),
@@ -98,7 +98,7 @@ cache(UA, Result, CacheSize, State) ->
 	cache(UA, Result, CacheSize - 1, State).
 
 parse2(UA, Order) ->
-	Match = #cache{ key = {'_',UA}, ua = '_', os = '_', device = '_' },
+	Match = #cache{ key = {'_',UA}, _ = '_' },
 	{Match2, _} = lists:foldl(fun(O, {M,P}) ->
 		M2 = setelement(pos(O), M, list_to_atom("$" ++ integer_to_list(P))),
 		P2 = P + 1,

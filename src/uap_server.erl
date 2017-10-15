@@ -85,7 +85,7 @@ cache(UA, Result, CacheSize, #state{ cache_size = X }) when X == unlimited; Cach
 	Id = case ets:match(?MODULE, Match) of
 		[] ->
 			I = erlang:unique_integer([positive]),
-			ets:insert(?MODULE, #cache{ key = {I,UA} }),
+			true = ets:insert_new(?MODULE, #cache{ key = {I,UA} }),
 			I;
 		[[I]] ->
 			I

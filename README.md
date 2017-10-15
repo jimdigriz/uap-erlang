@@ -7,7 +7,7 @@ Erlang User-Agent Parser Library for the [uap-core](https://github.com/ua-parser
 
 ## TODO
 
- * fix/investigate why the device tests fail (UA and OS are fine though)
+ * fix/investigate why the device tests fail (looks like the testdata its-self is broken)
 
 # Preflight
 

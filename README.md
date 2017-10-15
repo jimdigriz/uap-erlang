@@ -12,9 +12,9 @@ Erlang User-Agent Parser Library for the [uap-core](https://github.com/ua-parser
 
 # Preflight
 
-Get a copy of [`regexs.yaml`](https://github.com/ua-parser/uap-core/blob/master/regexes.yaml) with:
+Get a copy of [`regexes.yaml`](https://github.com/ua-parser/uap-core/blob/master/regexes.yaml) with:
 
-    make priv/regexs.yaml
+    make priv/regexes.yaml
 
 # Usage
 

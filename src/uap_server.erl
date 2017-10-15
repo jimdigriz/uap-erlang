@@ -21,10 +21,10 @@
 }).
 
 -record(cache, {
-	key,
-	ua,
-	os,
-	device
+	key		:: {pos_integer(), list() | binary()},
+	ua		:: uap_ua(),
+	os		:: uap_os(),
+	device		:: uap_device()
 }).
 
 -define(DEFAULT_PRIV, uap).

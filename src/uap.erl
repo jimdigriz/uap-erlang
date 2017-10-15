@@ -97,8 +97,6 @@ replace({undefined, N}, Captured) ->
 replace({R, _N}, Captured) ->
 	replace2(R, Captured, []).
 
-replace2([], _Captured, []) ->
-	undefined;
 replace2([], _Captured, RN) ->
 	case string:trim(RN) of [] -> undefined; X -> X end;
 replace2([$$,X|R], Captured, RN) when X >= $1, X =< $9 ->

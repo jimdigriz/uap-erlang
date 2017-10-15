@@ -8,7 +8,6 @@ Erlang User-Agent Parser Library for the [uap-core](https://github.com/ua-parser
 ## TODO
 
  * transparantly handle binary<->string conversion
- * fix/investigate why the device tests fail (looks like the testdata its-self is broken)
 
 # Preflight
 

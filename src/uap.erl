@@ -12,6 +12,7 @@
 }).
 
 -record(uap_re, {
+	type	:: ua | os | device,
 	re	:: tuple(),
 	replace	:: list()
 }).
@@ -27,24 +28,25 @@ state({Source, Pointer}) when (Source == file orelse Source == string), is_list(
 	[YAML] = yamerl_constr:Source(Pointer),
 	UAP = lists:map(fun({K,F}) ->
 		Y = proplists:get_value(K, YAML),
-		state2(F, Y)
+		state2(K, F, Y)
 	end, ?UAP_MAP),
 	{ok, list_to_tuple([uap|UAP])}.
 
-state2(Fields, REs) ->
-	lists:map(fun(PL) -> state3(Fields, PL) end, REs).
+state2(K, Fields, REs) ->
+	lists:map(fun(PL) -> state3(K, Fields, PL) end, REs).
 
-state3(Fields, PL) ->
+state3(K, Fields, PL) ->
 	RE = proplists:get_value("regex", PL),
 	Opts = case proplists:get_value("regex_flag", PL) of
 		undefined ->
-			[];
+			[unicode,ucp];
 		"i" ->
-			[caseless]
+			[unicode,ucp,caseless]
 	end,
 	{ok, MP} = re:compile(RE, Opts),
 	Replace = lists:map(fun(F) -> proplists:get_value(F, PL) end, Fields),
-	#uap_re{ re = MP, replace = Replace }.
+	Type = case K of "user_agent_parsers" -> ua; "os_parsers" -> os; "device_parsers" -> device end,
+	#uap_re{ type = Type, re = MP, replace = Replace }.
 
 parse(UA, UAP) when (is_list(UA) orelse is_binary(UA)), is_record(UAP, uap) ->
 	parse(UA, UAP, [ua,os,device]).
@@ -65,6 +67,9 @@ parse2(UA, Default, [RE = #uap_re{ re = MP }|REs]) ->
 	Match = re:run(UA, MP, [{capture,all_but_first,list}]),
 	parse3(UA, Default, REs, RE, Match).
 
+parse3(_UA, _Default, _REs, #uap_re{ replace = Replace, type = device }, {match,Captured}) ->
+	Replace2 = lists:zip(Replace, [1, 10, 1]),	% 10 to make it impossible to match
+	lists:map(fun(X) -> replace(X, Captured) end, Replace2);
 parse3(_UA, _Default, _REs, #uap_re{ replace = Replace }, {match,Captured}) ->
 	Replace2 = lists:zip(Replace, lists:seq(1, length(Replace))),
 	lists:map(fun(X) -> replace(X, Captured) end, Replace2);
@@ -92,9 +97,13 @@ replace({undefined, N}, Captured) ->
 replace({R, _N}, Captured) ->
 	replace2(R, Captured, []).
 
+replace2([], _Captured, []) ->
+	undefined;
 replace2([], _Captured, RN) ->
-	string:trim(RN);
+	case string:trim(RN) of [] -> undefined; X -> X end;
 replace2([$$,X|R], Captured, RN) when X >= $1, X =< $9 ->
-	replace2(R, Captured, RN ++ lists:nth(X - $0, Captured));
+	O = X - $0,
+	RNN = case O > length(Captured) of true -> []; false -> lists:nth(O, Captured) end,
+	replace2(R, Captured, RN ++ RNN);
 replace2([X|R], Captured, RN) ->
 	replace2(R, Captured, RN ++ [X]).

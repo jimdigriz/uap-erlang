@@ -14,7 +14,7 @@ Erlang User-Agent Parser Library for the [uap-core](https://github.com/ua-parser
 
 Get a copy of [`regexs.yaml`](https://github.com/ua-parser/uap-core/blob/master/regexes.yaml) with:
 
-    make regexs.yaml
+    make priv/regexs.yaml
 
 # Usage
 
@@ -25,7 +25,7 @@ From a `make all shell` you should be able to just run:
     application:start(yamerl),
     rr(uap),
     f(),
-    {ok, UAP} = uap:state({file,"regexes.yaml"}),
+    {ok, UAP} = uap:state({file,"priv/regexes.yaml"}),
     UA = "Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0",
     uap:parse(UA, UAP).
     

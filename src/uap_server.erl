@@ -21,7 +21,7 @@
 }).
 
 -record(cache, {
-	key		:: {pos_integer(), list() | binary()},
+	key		:: {list() | binary()},
 	ua		:: uap_ua(),
 	os		:: uap_os(),
 	device		:: uap_device()
@@ -51,7 +51,7 @@ init(Args) ->
 	Priv = proplists:get_value(priv, Args, ?DEFAULT_PRIV),
 	File = proplists:get_value(file, Args, ?DEFAULT_FILE),
 	CacheSize = proplists:get_value(cache, Args, ?DEFAULT_CACHE),
-	ets:new(?MODULE, [named_table,ordered_set,{keypos,#cache.key},{read_concurrency,true}]),
+	ets:new(?MODULE, [named_table,{keypos,#cache.key},{read_concurrency,true}]),
 	{ok, UAP} = uap:state({file,filename:join([code:priv_dir(Priv), File])}),
 	{ok, #state{ uap = UAP, cache_size = CacheSize }}.
 
@@ -81,24 +81,28 @@ code_change(_OldVsn, State, _Extra) ->
 cache(_UA, _Result, _CacheSize, #state{ cache_size = 0 }) ->
 	ok;
 cache(UA, Result, CacheSize, #state{ cache_size = X }) when X == unlimited; CacheSize < X ->
-	Match = #cache{ key = {'$1',UA}, _ = '_' },
-	Id = case ets:match(?MODULE, Match) of
-		[] ->
-			I = erlang:unique_integer([positive]),
-			true = ets:insert_new(?MODULE, #cache{ key = {I,UA} }),
-			I;
-		[[I]] ->
-			I
-	end,
 	Result2 = lists:map(fun({O,R}) -> {pos(O), R} end, Result),
-	true = ets:update_element(?MODULE, {Id,UA}, Result2),
+	ets:insert_new(?MODULE, #cache{ key = UA }),
+	true = ets:update_element(?MODULE, UA, Result2),
 	ok;
 cache(UA, Result, CacheSize, State) ->
-	true = ets:delete(?MODULE, ets:first(?MODULE)),
+	true = ets:delete(?MODULE, rkey(CacheSize)),
 	cache(UA, Result, CacheSize - 1, State).
 
+% http://erlang.org/pipermail/erlang-questions/2010-August/053051.html
+rkey(CacheSize) ->
+	I = rand:uniform(CacheSize),
+	case I > CacheSize/2 of
+		true ->
+			rkey(I, ets:last(?MODULE), prev);
+		false ->
+			rkey(I, ets:first(?MODULE), next)
+	end.
+rkey(0, K, _Direction) -> K;
+rkey(N, K, Direction) -> rkey(N - 1, ets:Direction(?MODULE, K), Direction).
+
 parse2(UA, Order) ->
-	Match = #cache{ key = {'_',UA}, _ = '_' },
+	Match = #cache{ key = UA, _ = '_' },
 	{Match2, _} = lists:foldl(fun(O, {M,P}) ->
 		M2 = setelement(pos(O), M, list_to_atom("$" ++ integer_to_list(P))),
 		P2 = P + 1,

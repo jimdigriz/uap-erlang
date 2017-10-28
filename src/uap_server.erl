@@ -104,7 +104,7 @@ rkey(N, K, Direction) -> rkey(N - 1, ets:Direction(?MODULE, K), Direction).
 parse2(UA, Order) ->
 	Match = #cache{ key = UA, _ = '_' },
 	Order2 = lists:zip(Order, lists:seq(1, length(Order))),
-	{Match2, _} = lists:foldl(fun({O,P}, M) ->
+	Match2 = lists:foldl(fun({O,P}, M) ->
 		setelement(pos(O), M, list_to_atom("$" ++ integer_to_list(P)))
 	end, Match, Order2),
 	case ets:match(?MODULE, Match2) of

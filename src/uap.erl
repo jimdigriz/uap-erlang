@@ -83,7 +83,7 @@ parse3(UA, Default, REs, _RE, nomatch) ->
 ?PARSE4(os, uap_os);
 ?PARSE4(device, uap_device).
 
-str2bin(X) when is_list(X) -> list_to_binary(X);
+str2bin(X) when is_list(X) -> unicode:characters_to_binary(X);
 str2bin(X) -> X.
 
 uap_pos(ua) -> #uap.ua;

@@ -21,7 +21,7 @@ Get a copy of [`regexes.yaml`](https://github.com/ua-parser/uap-core/blob/master
 
 From a `make all shell` you should be able to just run:
 
-    application:ensure_all_start(yamerl),
+    application:ensure_all_started(yamerl),
     rr(uap),
     f(),
     {ok, UAP} = uap:state({file,"priv/regexes.yaml"}),

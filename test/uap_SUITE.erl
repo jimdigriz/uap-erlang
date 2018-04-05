@@ -3,13 +3,26 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("src/uap.hrl").
 
--export([all/0, init_per_testcase/2]).
+-export([all/0, groups/0, init_per_group/2, end_per_group/2, init_per_testcase/2]).
 -export([ua/1]).
 -export([os/1]).
 -export([device/1]).
 
+-define(TYPES, [ua,os,device]).
+
 all() ->
-	[ua,os,device].
+	[{group,list},{group,binary}].
+
+groups() ->
+	[{list,[parallel],?TYPES},{binary,[parallel],?TYPES}].
+
+init_per_group(list, Config) ->
+	[{type,list}|Config];
+init_per_group(binary, Config) ->
+	[{type,binary}|Config].
+
+end_per_group(_, _Config) ->
+	ok.
 
 init_per_testcase(Test, Config) ->
 	application:ensure_all_started(yamerl),
@@ -20,33 +33,42 @@ init_per_testcase(Test, Config) ->
 	[{uap,UAP},{tests,Tests}|Config].
 
 ua(Config) ->
+	Type = ?config(type, Config),
 	UAP = ?config(uap, Config),
 	Tests = ?config(tests, Config),
-	ct:log(info, ?STD_IMPORTANCE, "ua (~p tests)", [length(Tests)]),
-	true = lists:all(fun(X) -> ua2(UAP, X) end, Tests).
+	ct:log(info, ?STD_IMPORTANCE, "ua ~s (~b tests)", [Type, length(Tests)]),
+	true = lists:all(fun(X) -> ua2(X, Type, UAP) end, Tests).
 
 os(Config) ->
+	Type = ?config(type, Config),
 	UAP = ?config(uap, Config),
 	Tests = ?config(tests, Config),
-	ct:log(info, ?STD_IMPORTANCE, "os (~p tests)", [length(Tests)]),
-	true = lists:all(fun(X) -> os2(UAP, X) end, Tests).
+	ct:log(info, ?STD_IMPORTANCE, "os ~s (~b tests)", [Type, length(Tests)]),
+	true = lists:all(fun(X) -> os2(X, Type, UAP) end, Tests).
 
 device(Config) ->
+	Type = ?config(type, Config),
 	UAP = ?config(uap, Config),
 	Tests = ?config(tests, Config),
-	ct:log(info, ?STD_IMPORTANCE, "device (~p tests)", [length(Tests)]),
-	true = lists:all(fun(X) -> device2(UAP, X) end, Tests).
+	ct:log(info, ?STD_IMPORTANCE, "device ~s (~b tests)", [Type, length(Tests)]),
+	true = lists:all(fun(X) -> device2(X, Type, UAP) end, Tests).
 
 %%
 
--define(EXPECTED(X), null2undefined(proplists:get_value(??X, Test))).
+-define(EXPECTED(X), null2undefined(type(proplists:get_value(??X, Test), Type))).
 -define(PASS(X), if X =/= Expected -> ct:log(error, ?HI_IMPORTANCE, "'~s' failed: ~p (expected: ~p)", [UA, X, Expected]), false; true -> true end).
+
+type(X, binary) when is_list(X) ->
+	unicode:characters_to_binary(X);
+type(X, _Type) ->
+	X.
 
 null2undefined(null) -> undefined;
 null2undefined(X) -> X.
 
-ua2(UAP, Test) ->
-	UA = proplists:get_value("user_agent_string", Test),
+ua2(Test, Type, UAP) ->
+	UA0 = proplists:get_value("user_agent_string", Test),
+	UA = if Type == binary -> unicode:characters_to_binary(UA0); true -> UA0 end,
 	[UAP_UA] = uap:parse(UA, [ua], UAP),
 	Expected = #uap_ua{
 		family		= ?EXPECTED(family),
@@ -56,8 +78,9 @@ ua2(UAP, Test) ->
 	},
 	?PASS(UAP_UA).
 
-os2(UAP, Test) ->
-	UA = proplists:get_value("user_agent_string", Test),
+os2(Test, Type, UAP) ->
+	UA0 = proplists:get_value("user_agent_string", Test),
+	UA = if Type == binary -> unicode:characters_to_binary(UA0); true -> UA0 end,
 	[UAP_OS] = uap:parse(UA, [os], UAP),
 	Expected = #uap_os{
 		family		= ?EXPECTED(family),
@@ -68,8 +91,9 @@ os2(UAP, Test) ->
 	},
 	?PASS(UAP_OS).
 
-device2(UAP, Test) ->
-	UA = proplists:get_value("user_agent_string", Test),
+device2(Test, Type, UAP) ->
+	UA0 = proplists:get_value("user_agent_string", Test),
+	UA = if Type == binary -> unicode:characters_to_binary(UA0); true -> UA0 end,
 	[UAP_Device] = uap:parse(UA, [device], UAP),
 	Expected = #uap_device{
 		family		= ?EXPECTED(family),

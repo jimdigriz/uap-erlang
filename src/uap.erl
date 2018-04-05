@@ -106,7 +106,7 @@ replace2([], _Captured, RN) ->
 	case string:trim(RN) of [] -> undefined; X -> X end;
 replace2([$$,X|R], Captured, RN) when X >= $1, X =< $9 ->
 	O = X - $0,
-	RNN = case O > length(Captured) of true -> []; false -> lists:nth(O, Captured) end,
+	RNN = if O > length(Captured) -> []; true -> lists:nth(O, Captured) end,
 	replace2(R, Captured, RN ++ RNN);
 replace2([X|R], Captured, RN) ->
 	replace2(R, Captured, RN ++ [X]).

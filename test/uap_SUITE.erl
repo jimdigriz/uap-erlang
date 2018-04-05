@@ -11,11 +11,11 @@
 all() ->
 	[ua,os,device].
 
-init_per_testcase(X, Config) ->
-	application:start(yamerl),
+init_per_testcase(Test, Config) ->
+	application:ensure_all_started(yamerl),
 	DataDir = ?config(data_dir, Config),
-	{ok, UAP} = uap:state({file,filename:join([DataDir, "regexes.yaml"])}),
-	[YAML] = yamerl_constr:file(filename:join([DataDir, atom_to_list(X) ++ ".yaml"])),
+	{ok, UAP} = uap:state(file, filename:join([DataDir, "regexes.yaml"])),
+	[YAML] = yamerl_constr:file(filename:join([DataDir, atom_to_list(Test) ++ ".yaml"])),
 	Tests = proplists:get_value("test_cases", YAML),
 	[{uap,UAP},{tests,Tests}|Config].
 
@@ -40,15 +40,14 @@ device(Config) ->
 %%
 
 -define(EXPECTED(X), null2undefined(proplists:get_value(??X, Test))).
--define(PASS(X), Pass = X == Expected, case Pass of true -> ct:log(info, ?STD_IMPORTANCE, "success: ~p", [X]); false -> ct:log(error, ?HI_IMPORTANCE, "failed: ~p (expected: ~p)", [X, Expected]) end, Pass).
+-define(PASS(X), if X =/= Expected -> ct:log(error, ?HI_IMPORTANCE, "'~s' failed: ~p (expected: ~p)", [UA, X, Expected]), false; true -> true end).
 
 null2undefined(null) -> undefined;
 null2undefined(X) -> X.
 
 ua2(UAP, Test) ->
 	UA = proplists:get_value("user_agent_string", Test),
-	ct:log(info, ?STD_IMPORTANCE, "~p", [UA]),
-	[UAP_UA] = uap:parse(UA, UAP, [ua]),
+	[UAP_UA] = uap:parse(UA, [ua], UAP),
 	Expected = #uap_ua{
 		family		= ?EXPECTED(family),
 		major		= ?EXPECTED(major),
@@ -59,8 +58,7 @@ ua2(UAP, Test) ->
 
 os2(UAP, Test) ->
 	UA = proplists:get_value("user_agent_string", Test),
-	ct:log(info, ?STD_IMPORTANCE, "~p", [UA]),
-	[UAP_OS] = uap:parse(UA, UAP, [os]),
+	[UAP_OS] = uap:parse(UA, [os], UAP),
 	Expected = #uap_os{
 		family		= ?EXPECTED(family),
 		major		= ?EXPECTED(major),
@@ -72,8 +70,7 @@ os2(UAP, Test) ->
 
 device2(UAP, Test) ->
 	UA = proplists:get_value("user_agent_string", Test),
-	ct:log(info, ?STD_IMPORTANCE, "~p", [UA]),
-	[UAP_Device] = uap:parse(UA, UAP, [device]),
+	[UAP_Device] = uap:parse(UA, [device], UAP),
 	Expected = #uap_device{
 		family		= ?EXPECTED(family),
 		brand		= ?EXPECTED(brand),

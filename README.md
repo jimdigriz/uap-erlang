@@ -5,10 +5,6 @@ Erlang User-Agent Parser Library for the [uap-core](https://github.com/ua-parser
  * [uap-core](https://github.com/ua-parser/uap-core)
  * [ua-parser Specification](https://github.com/ua-parser/uap-core/blob/master/docs/specification.md)
 
-## TODO
-
- * transparantly handle binary<->string conversion
-
 # Preflight
 
 Get a copy of [`regexes.yaml`](https://github.com/ua-parser/uap-core/blob/master/regexes.yaml) with:
@@ -24,7 +20,7 @@ From a `make all shell` you should be able to just run:
     application:ensure_all_started(yamerl),
     rr(uap),
     f(),
-    {ok, UAP} = uap:state({file,"priv/regexes.yaml"}),
+    {ok, UAP} = uap:state(file, "priv/regexes.yaml"),
     UA = "Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0",
     uap:parse(UA, UAP).
     
@@ -35,13 +31,12 @@ From a `make all shell` you should be able to just run:
      #uap_device{family = "Other",brand = undefined,
                  model = undefined}]
 
-The record is populated by the same format as the input type of your User-Agent, either a string or binary.
-
 ## Standalone Server
 
+    application:ensure_all_started(yamerl),
     rr(uap).
     Args = [],	% [{priv,uap},{file,"regexes.yaml"}]
-    {ok,_} = uap_server:start_link(Args).
+    {ok, _} = uap_server:start_link(Args).
     uap_server:parse(UA, [os]).
 
 Supported configuration arguments are:
@@ -69,15 +64,15 @@ Add to your `Makefile`:
 
 ## `uap` library
 
-### `state({file | string, list()}) -> uap()`
+### `state(file | string, iodata()) -> {ok, uap()}`
 
 Loads in YAML in the [expected format](https://github.com/ua-parser/uap-core/blob/master/docs/specification.md) from either a provided filepath or in-memory string.
 
-### `parse(UA, UAP) -> [uap_ua(), uap_os(), uap_device()]`
+### `parse(iodata(), uap()) -> [uap_ua() | uap_os() | uap_device()]`
 
-Same as `parse(UA, UAP, [ua, os, device])`.
+Same as `parse(iodata(), [ua, os, device], uap())`.
 
-### `parse(UA, uap(), Order) -> [uap_ua() | uap_os() | uap_device()]`
+### `parse(iodata(), Order, uap()) -> [uap_ua() | uap_os() | uap_device()]`
 
 Parses the User-Agent in passed in as the string `UA`.
 

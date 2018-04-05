@@ -79,11 +79,10 @@ uap_size(device) -> record_info(size, uap_device).
 parse2(_UA, _Type, []) ->
 	nomatch;
 parse2(UA, Type, [RE = #uap_re{ re = MP }|REs]) ->
-	REType = if is_binary(UA) -> binary; true -> list end,
-	Match = re:run(UA, MP, [{capture,all_but_first,REType}]),
+	Match = re:run(UA, MP, [{capture,all_but_first,list}]),
 	parse3(UA, Type, REs, RE, Match).
 
-parse3(_UA, Type, _REs, RE, {match, Captured}) ->
+parse3(UA, Type, _REs, RE, {match, Captured}) ->
 	MatchDefault = if
 		Type == device ->
 			[1, 10, 1];	% 10 to make it impossible to match
@@ -91,9 +90,19 @@ parse3(_UA, Type, _REs, RE, {match, Captured}) ->
 			lists:seq(1, length(RE#uap_re.replace))
 	end,
 	ReplacePairs = lists:zip(RE#uap_re.replace, MatchDefault),
-	lists:map(fun(X) -> replace(X, Captured) end, ReplacePairs);
+	lists:map(fun
+		(X) when is_binary(UA) ->
+			to_binary(replace(X, Captured));
+		(X) ->
+			replace(X, Captured)
+	end, ReplacePairs);
 parse3(UA, Type, REs, _RE, nomatch) ->
 	parse2(UA, Type, REs).
+
+to_binary(X) when is_list(X) ->
+	unicode:characters_to_binary(X);
+to_binary(X) ->
+	X.
 
 replace({undefined, N}, Captured) when N > length(Captured) ->
 	undefined;
@@ -103,10 +112,10 @@ replace({R, _N}, Captured) ->
 	replace2(R, Captured, []).
 
 replace2([], _Captured, RN) ->
-	case string:trim(RN) of [] -> undefined; X -> X end;
+	case string:trim(lists:reverse(RN)) of [] -> undefined; X -> X end;
 replace2([$$,X|R], Captured, RN) when X >= $1, X =< $9 ->
 	O = X - $0,
 	RNN = if O > length(Captured) -> []; true -> lists:nth(O, Captured) end,
-	replace2(R, Captured, RN ++ RNN);
+	replace2(R, Captured, [RNN|RN]);
 replace2([X|R], Captured, RN) ->
-	replace2(R, Captured, RN ++ [X]).
+	replace2(R, Captured, [X|RN]).

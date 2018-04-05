@@ -53,10 +53,10 @@ parse(UA, UAP) when is_record(UAP, uap) ->
 
 -spec parse(iolist(), list(ua | os | device), uap()) -> list(uap_ua() | uap_os() | uap_device()).
 parse(UA, Order, UAP) when is_record(UAP, uap) ->
-	{RECapture, Other} = if is_binary(UA) -> {binary,<<"Other">>}; true -> {list,"Other"} end,
+	Other = if is_binary(UA) -> <<"Other">>; true -> "Other" end,
 	lists:map(fun(Type) ->
 		REs = element(uap_pos(Type), UAP),
-		Result0 = parse2(UA, REs, Type, RECapture),
+		Result0 = parse2(UA, Type, REs),
 		Result1 = if Result0 == nomatch -> [Other]; true -> Result0 end,
 		Result2 = [uap_type(Type)|Result1] ++ [undefined,undefined,undefined,undefined],
 		list_to_tuple(lists:sublist(Result2, uap_size(Type)))
@@ -76,13 +76,14 @@ uap_size(ua) -> record_info(size, uap_ua);
 uap_size(os) -> record_info(size, uap_os);
 uap_size(device) -> record_info(size, uap_device).
 
-parse2(_UA, [], _Type, _RECapture) ->
+parse2(_UA, _Type, []) ->
 	nomatch;
-parse2(UA, [RE = #uap_re{ re = MP }|REs], Type, RECapture) ->
-	Match = re:run(UA, MP, [{capture,all_but_first,RECapture}]),
-	parse3(UA, REs, Type, RECapture, RE, Match).
+parse2(UA, Type, [RE = #uap_re{ re = MP }|REs]) ->
+	REType = if is_binary(UA) -> binary; true -> list end,
+	Match = re:run(UA, MP, [{capture,all_but_first,REType}]),
+	parse3(UA, Type, REs, RE, Match).
 
-parse3(_UA, _REs, Type, _RECapture, RE, {match, Captured}) ->
+parse3(_UA, Type, _REs, RE, {match, Captured}) ->
 	MatchDefault = if
 		Type == device ->
 			[1, 10, 1];	% 10 to make it impossible to match
@@ -91,8 +92,8 @@ parse3(_UA, _REs, Type, _RECapture, RE, {match, Captured}) ->
 	end,
 	ReplacePairs = lists:zip(RE#uap_re.replace, MatchDefault),
 	lists:map(fun(X) -> replace(X, Captured) end, ReplacePairs);
-parse3(UA, REs, Type, RECapture, _RE, nomatch) ->
-	parse2(UA, REs, Type, RECapture).
+parse3(UA, Type, REs, _RE, nomatch) ->
+	parse2(UA, Type, REs).
 
 replace({undefined, N}, Captured) when N > length(Captured) ->
 	undefined;

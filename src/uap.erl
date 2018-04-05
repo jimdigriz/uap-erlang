@@ -64,6 +64,18 @@ parse(UA, Order, UAP) when is_record(UAP, uap) ->
 
 %%
 
+uap_pos(ua) -> #uap.ua;
+uap_pos(os) -> #uap.os;
+uap_pos(device) -> #uap.device.
+
+uap_type(ua) -> uap_ua;
+uap_type(os) -> uap_os;
+uap_type(device) -> uap_device.
+
+uap_size(ua) -> record_info(size, uap_ua);
+uap_size(os) -> record_info(size, uap_os);
+uap_size(device) -> record_info(size, uap_device).
+
 parse2(_UA, [], _Type, _RECapture) ->
 	nomatch;
 parse2(UA, [RE = #uap_re{ re = MP }|REs], Type, RECapture) ->
@@ -97,15 +109,3 @@ replace2([$$,X|R], Captured, RN) when X >= $1, X =< $9 ->
 	replace2(R, Captured, RN ++ RNN);
 replace2([X|R], Captured, RN) ->
 	replace2(R, Captured, RN ++ [X]).
-
-uap_pos(ua) -> #uap.ua;
-uap_pos(os) -> #uap.os;
-uap_pos(device) -> #uap.device.
-
-uap_type(ua) -> uap_ua;
-uap_type(os) -> uap_os;
-uap_type(device) -> uap_device.
-
-uap_size(ua) -> record_info(size, uap_ua);
-uap_size(os) -> record_info(size, uap_os);
-uap_size(device) -> record_info(size, uap_device).

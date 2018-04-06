@@ -90,19 +90,12 @@ parse3(UA, Type, _REs, RE, {match, Captured}) ->
 			lists:seq(1, length(RE#uap_re.replace))
 	end,
 	ReplacePairs = lists:zip(RE#uap_re.replace, MatchDefault),
-	lists:map(fun
-		(X) when is_binary(UA) ->
-			to_binary(replace(X, Captured));
-		(X) ->
-			replace(X, Captured)
+	lists:map(fun(RP) ->
+		V = replace(RP, Captured),
+		if is_binary(UA), is_list(V) -> unicode:characters_to_binary(V); true -> V end
 	end, ReplacePairs);
 parse3(UA, Type, REs, _RE, nomatch) ->
 	parse2(UA, Type, REs).
-
-to_binary(X) when is_list(X) ->
-	unicode:characters_to_binary(X);
-to_binary(X) ->
-	X.
 
 replace({undefined, N}, Captured) when N > length(Captured) ->
 	undefined;

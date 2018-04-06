@@ -76,6 +76,8 @@ Same as `parse(iodata(), [ua, os, device], uap())`.
 
 Parses the User-Agent in passed in as the string `UA`.
 
+**N.B.** from the unit tests, it seems that parsing binaries is faster than lists
+
 # Testing
 
 Fetch a copy of the [test data](https://github.com/ua-parser/uap-core/blob/master/tests/):

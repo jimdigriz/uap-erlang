@@ -2,7 +2,7 @@
 
 -export([process/1]).
 
--spec process(iolist()) -> iolist().
+-spec process(iodata()) -> iodata().
 process(UA) ->
 	Type = if is_binary(UA) -> binary; true -> list end,
 	lists:foldl(fun

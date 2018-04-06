@@ -25,7 +25,7 @@
 -define(UAP_FIELDS_DEVICE, ["device_replacement", "brand_replacement", "model_replacement"]).
 -define(UAP_MAP, [{"user_agent_parsers",?UAP_FIELDS_UA},{"os_parsers",?UAP_FIELDS_OS},{"device_parsers",?UAP_FIELDS_DEVICE}]).
 
--spec state(file | string, iolist()) -> {ok, uap()}.
+-spec state(file | string, iodata()) -> {ok, uap()}.
 state(Source, Pointer) when Source == file; Source == string ->
 	[YAML] = yamerl_constr:Source(Pointer),
 	UAP = lists:map(fun({K,F}) ->
@@ -47,11 +47,11 @@ state(Source, Pointer) when Source == file; Source == string ->
 	end, ?UAP_MAP),
 	{ok, list_to_tuple([uap|UAP])}.
 
--spec parse(iolist(), uap()) -> list(uap_ua() | uap_os() | uap_device()).
+-spec parse(iodata(), uap()) -> list(uap_ua() | uap_os() | uap_device()).
 parse(UA, UAP) when is_record(UAP, uap) ->
 	parse(UA, [ua, os, device], UAP).
 
--spec parse(iolist(), list(ua | os | device), uap()) -> list(uap_ua() | uap_os() | uap_device()).
+-spec parse(iodata(), list(ua | os | device), uap()) -> list(uap_ua() | uap_os() | uap_device()).
 parse(UA, Order, UAP) when is_record(UAP, uap) ->
 	Other = if is_binary(UA) -> <<"Other">>; true -> "Other" end,
 	lists:map(fun(Type) ->

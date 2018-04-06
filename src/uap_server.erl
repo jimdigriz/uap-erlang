@@ -40,10 +40,10 @@
 start_link(Args) ->
 	gen_server:start_link({local,?MODULE}, ?MODULE, Args, []).
 
--spec parse(iolist()) -> {ok, list(uap_ua() | uap_os() | uap_device())} | {error, any()}.
+-spec parse(iodata()) -> {ok, list(uap_ua() | uap_os() | uap_device())} | {error, any()}.
 parse(UA) ->
 	parse(UA, [ua, os, device]).
--spec parse(iolist(), list(ua | os | device)) -> {ok, list(uap_ua() | uap_os() | uap_device())} | {error, any()}.
+-spec parse(iodata(), list(ua | os | device)) -> {ok, list(uap_ua() | uap_os() | uap_device())} | {error, any()}.
 parse(UA0, Order) when is_list(UA0), is_list(Order) ->	% binary re is faster
 	UA = unicode:characters_to_binary(UA0),
 	case parse(UA, Order) of

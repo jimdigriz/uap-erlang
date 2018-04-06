@@ -2882,6 +2882,14 @@ pkg_oauth2_fetch = git
 pkg_oauth2_repo = https://github.com/kivra/oauth2
 pkg_oauth2_commit = master
 
+PACKAGES += observer_cli
+pkg_observer_cli_name = observer_cli
+pkg_observer_cli_description = Visualize Erlang/Elixir Nodes On The Command Line
+pkg_observer_cli_homepage = http://zhongwencool.github.io/observer_cli
+pkg_observer_cli_fetch = git
+pkg_observer_cli_repo = https://github.com/zhongwencool/observer_cli
+pkg_observer_cli_commit = master
+
 PACKAGES += octopus
 pkg_octopus_name = octopus
 pkg_octopus_description = Small and flexible pool manager written in Erlang

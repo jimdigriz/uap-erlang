@@ -141,7 +141,7 @@ parse2(UA, Order) ->
 						(_, O) ->
 							O
 					end, [], ResultCachePairs)),
-					ResultParse = parse3(UA, OrderMissing),
+					{ok, ResultParse} = parse3(UA, OrderMissing),
 					lists:foldr(fun
 						({undefined, T}, R) ->
 							{value, X} = lists:keysearch(uap_type(T), 1, ResultParse),

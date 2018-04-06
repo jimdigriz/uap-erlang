@@ -4,27 +4,26 @@ PROJECT_VERSION = 0.1.0
 
 DEPS = yamerl
 
-CT_SUITES = $(PROJECT)
+CT_SUITES = $(patsubst test/%_SUITE.erl,%,$(wildcard test/*_SUITE.erl))
+
+CT_DATA_DIRS = $(foreach c,$(CT_SUITES),test/$(c)_SUITE_data)
 
 include erlang.mk
 
-priv:
+print-%:
+	@echo '$*=$($*)'
+
+priv $(CT_DATA_DIRS):
 	mkdir -p $@
 
 priv/regexes.yaml: priv
 	curl -f --compressed -L -o $@ https://raw.githubusercontent.com/ua-parser/uap-core/master/regexes.yaml
 
 .PHONY: testdata
-testdata: test/uap_SUITE_data testdata_yaml
+testdata: $(foreach d,$(CT_DATA_DIRS),$(d)/regexes.yaml) $(foreach t,ua os device,test/uap_SUITE_data/$(t).yaml)
 
-test/uap_SUITE_data:
-	mkdir -p $@
-
-.PHONY: testdata_yaml
-testdata_yaml: test/uap_SUITE_data/regexes.yaml test/uap_SUITE_data/ua.yaml test/uap_SUITE_data/os.yaml test/uap_SUITE_data/device.yaml
-
-test/uap_SUITE_data/regexes.yaml: priv/regexes.yaml
-	ln -f -s ../../priv/regexes.yaml $@
+test/%_SUITE_data/regexes.yaml: priv/regexes.yaml test/%_SUITE_data
+	ln -f -s ../../$< $@
 
 test/uap_SUITE_data/%.yaml:
 	curl -f --compressed -L -o $@ https://raw.githubusercontent.com/ua-parser/uap-core/master/tests/test_$(notdir $@)

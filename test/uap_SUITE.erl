@@ -56,8 +56,11 @@ init_per_testcase(Type, Config0) when Type == binary ->
 	Tests0 = ?config(tests, Config0),
 	Config = proplists:delete(tests, Config0),
 	Tests = lists:map(fun(Test) ->
-		lists:map(fun({K,V}) ->
-			{K,to_binary(V)}
+		lists:map(fun
+			({K,V}) when is_list(V) ->
+				{K,unicode:characters_to_binary(V)};
+			(KV) ->
+				KV
 		end, Test)
 	end, Tests0),
 	[{tests,Tests},{type,Type}|Config].
@@ -73,11 +76,6 @@ binary(Config) ->
 	list(Config).
 
 %%
-
-to_binary(X) when is_list(X) ->
-	unicode:characters_to_binary(X);
-to_binary(X) ->
-	X.
 
 -define(EXPECTED(X), null2undefined(proplists:get_value(??X, Test))).
 -define(PASS(X), if X =/= Expected -> ct:log(error, ?HI_IMPORTANCE, "'~s' failed: ~p (expected: ~p)", [UA, X, Expected]), false; true -> true end).

@@ -13,8 +13,6 @@
 
 -export([ua/2, os/2, device/2]).	% INTERNAL
 
--define(TYPES, [ua,os,device]).
-
 all() ->
 	[
 		{group,ua},

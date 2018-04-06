@@ -35,7 +35,6 @@
 
 -spec start_link(list()) -> {ok, pid()}.
 start_link(Args) ->
-	application:start(yamerl),
 	gen_server:start_link({local,?MODULE}, ?MODULE, Args, []).
 
 -spec parse(list() | binary()) -> list(uap_ua() | uap_os() | uap_device()).
@@ -56,7 +55,7 @@ init(Args) ->
 	{ok, #state{ uap = UAP, cache_size = CacheSize }}.
 
 handle_call({parse, UA, Order}, _From, State = #state{ uap = UAP }) ->
-	Result = uap:parse(UA, UAP, Order),
+	Result = uap:parse(UA, Order, UAP),
 	Result2 = lists:zip(Order, Result),
 	CacheSize = ets:info(?MODULE, size),
 	ok = cache(UA, Result2, CacheSize, State),
@@ -124,3 +123,5 @@ parse2(UA, Order) ->
 pos(ua) -> #cache.ua;
 pos(os) -> #cache.os;
 pos(device) -> #cache.device.
+
+

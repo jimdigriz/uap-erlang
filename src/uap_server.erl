@@ -121,53 +121,6 @@ code_change(_OldVsn, State, _Extra) ->
 
 %%
 
-cache({_UA, _Result}, _State = #state{ cache_size = 0 }) ->
-	ok;
-cache({UA, Result}, _State = #state{ cache_size = unlimited }) ->
-	{ElementSpec, Cache} = lists:mapfoldl(fun
-		(R = #uap_ua{}, C) ->
-			{{#cache.ua, R}, C#cache{ ua = R }};
-		(R = #uap_os{}, C) ->
-			{{#cache.os, R}, C#cache{ os = R }};
-		(R = #uap_device{}, C) ->
-			{{#cache.device, R}, C#cache{ device = R }}
-	end, #cache{ key = UA }, Result),
-	Inserted = ets:insert_new(?MODULE, Cache),
-	if
-		not Inserted ->
-			ets:update_element(?MODULE, UA, ElementSpec);
-		true ->
-			ok
-	end;
-cache(X = {_UA, _Result}, State) ->
-	spawn_link(fun() ->
-		Size = ets:info(?MODULE, size),
-		if
-			Size >= State#state.cache_size ->
-				Key = rkey(Size),
-				gen_server:cast(?MODULE, {cache_delete, Key});
-			true ->
-				ok
-		end
-	end),
-	cache(X, State#state{ cache_size = unlimited }).
-
-% http://erlang.org/pipermail/erlang-questions/2010-August/053051.html
-rkey(Size) ->
-	true = ets:safe_fixtable(?MODULE, true),
-	I = rand:uniform(Size),
-	if
-		I > Size div 2 ->
-			rkey(ets:last(?MODULE), prev, I);
-		true ->
-			rkey(ets:first(?MODULE), next, I)
-	end.
-rkey(K, _Direction, 0) ->
-	true = ets:safe_fixtable(?MODULE, false),
-	K;
-rkey(K, Direction, N) ->
-	rkey(ets:Direction(?MODULE, K), Direction, N - 1).
-
 parse2(UA, Order) ->
 	case ets:lookup(?MODULE, UA) of
 		[] ->
@@ -216,3 +169,50 @@ cache_pos(device) -> #cache.device.
 uap_type(ua) -> uap_ua;
 uap_type(os) -> uap_os;
 uap_type(device) -> uap_device.
+
+cache({_UA, _Result}, _State = #state{ cache_size = 0 }) ->
+	ok;
+cache({UA, Result}, _State = #state{ cache_size = unlimited }) ->
+	{ElementSpec, Cache} = lists:mapfoldl(fun
+		(R = #uap_ua{}, C) ->
+			{{#cache.ua, R}, C#cache{ ua = R }};
+		(R = #uap_os{}, C) ->
+			{{#cache.os, R}, C#cache{ os = R }};
+		(R = #uap_device{}, C) ->
+			{{#cache.device, R}, C#cache{ device = R }}
+	end, #cache{ key = UA }, Result),
+	Inserted = ets:insert_new(?MODULE, Cache),
+	if
+		not Inserted ->
+			ets:update_element(?MODULE, UA, ElementSpec);
+		true ->
+			ok
+	end;
+cache(X = {_UA, _Result}, State) ->
+	spawn_link(fun() ->
+		Size = ets:info(?MODULE, size),
+		if
+			Size >= State#state.cache_size ->
+				Key = rkey(Size),
+				gen_server:cast(?MODULE, {cache_delete, Key});
+			true ->
+				ok
+		end
+	end),
+	cache(X, State#state{ cache_size = unlimited }).
+
+% http://erlang.org/pipermail/erlang-questions/2010-August/053051.html
+rkey(Size) ->
+	true = ets:safe_fixtable(?MODULE, true),
+	I = rand:uniform(Size),
+	if
+		I > Size div 2 ->
+			rkey(ets:last(?MODULE), prev, I);
+		true ->
+			rkey(ets:first(?MODULE), next, I)
+	end.
+rkey(K, _Direction, 0) ->
+	true = ets:safe_fixtable(?MODULE, false),
+	K;
+rkey(K, Direction, N) ->
+	rkey(ets:Direction(?MODULE, K), Direction, N - 1).

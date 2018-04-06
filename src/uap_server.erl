@@ -16,15 +16,18 @@
 -include("uap.hrl").
 
 -record(state, {
-	uap,
-	cache_size	:: unlimited | non_neg_integer()
+	uap				:: uap:uap(),
+	cache_size			:: unlimited | non_neg_integer(),
+
+	requests	= dict:new()	:: dict:dict({binary(), list(ua | os | device)}, list(any())),
+	monitors	= dict:new()	:: dict:dict(pid(), {reference(), binary()})
 }).
 
 -record(cache, {
-	key		:: {list() | binary()},
-	ua		:: uap_ua(),
-	os		:: uap_os(),
-	device		:: uap_device()
+	key				:: binary(),
+	ua				:: uap_ua(),
+	os				:: uap_os(),
+	device				:: uap_device()
 }).
 
 -define(DEFAULT_PRIV, uap).
@@ -37,11 +40,27 @@
 start_link(Args) ->
 	gen_server:start_link({local,?MODULE}, ?MODULE, Args, []).
 
--spec parse(iodata()) -> list(uap_ua() | uap_os() | uap_device()).
+-spec parse(iolist()) -> {ok, list(uap_ua() | uap_os() | uap_device())} | {error, any()}.
 parse(UA) ->
-	parse(UA, [ua,os,device]).
--spec parse(iodata(), list(ua | os | device)) -> list(uap_ua() | uap_os() | uap_device()).
-parse(UA, Order) when is_list(Order) ->
+	parse(UA, [ua, os, device]).
+-spec parse(iolist(), list(ua | os | device)) -> {ok, list(uap_ua() | uap_os() | uap_device())} | {error, any()}.
+parse(UA0, Order) when is_list(UA0), is_list(Order) ->	% binary re is faster
+	UA = unicode:characters_to_binary(UA0),
+	case parse(UA, Order) of
+		{ok, Result0} ->
+			Result = lists:map(fun(R) ->
+				list_to_tuple(lists:map(fun
+					(X) when is_binary(X) ->
+						unicode:characters_to_list(X);
+					(X) ->
+						X
+				end, tuple_to_list(R)))
+			end, Result0),
+			{ok, Result};
+		Else ->
+			Else
+	end;
+parse(UA, Order) when is_binary(UA), is_list(Order) ->
 	parse2(UA, Order).
 
 %% gen_server.
@@ -54,18 +73,43 @@ init(Args) ->
 	{ok, UAP} = uap:state(file, filename:join([code:priv_dir(Priv), File])),
 	{ok, #state{ uap = UAP, cache_size = CacheSize }}.
 
-handle_call({parse, UA, Order}, _From, State = #state{ uap = UAP }) ->
-	Result = uap:parse(UA, Order, UAP),
-	Result2 = lists:zip(Order, Result),
-	CacheSize = ets:info(?MODULE, size),
-	ok = cache(UA, Result2, CacheSize, State),
-	{reply, Result, State};
+handle_call({parse, UA, Order}, From, State) ->
+	Key = {UA, lists:usort(Order)},
+	Duplicate = dict:is_key(Key, State#state.requests),
+	Monitors = if
+		Duplicate ->
+			State#state.monitors;
+		true ->
+			{Pid, MonitorRef} = spawn_monitor(fun() ->
+				Result = uap:parse(UA, Order, State#state.uap),
+				ok = gen_server:cast(?MODULE, {parse, self(), UA, Order, Result})
+			end),
+			dict:store(Pid, {MonitorRef, Key}, State#state.monitors)
+	end,
+	Requests = dict:append(Key, From, State#state.requests),
+	{noreply, State#state{ requests = Requests, monitors = Monitors }};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
+handle_cast({parse, Pid, UA, Order, Result}, State) ->
+	Key = {UA, lists:usort(Order)},
+	{Froms, Requests} = dict:take(Key, State#state.requests),
+	{{MonitorRef, Key}, Monitors} = dict:take(Pid, State#state.monitors),
+	lists:foreach(fun(From) -> gen_server:reply(From, {ok, Result}) end, Froms),
+	demonitor(MonitorRef, [flush]),
+	cache({UA, Result}, State),
+	{noreply, State#state{ requests = Requests, monitors = Monitors }};
+handle_cast({cache_delete, Key}, State) ->
+	true = ets:delete(?MODULE, Key),
+	{noreply, State};
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
+handle_info({'DOWN', MonitorRef, process, Pid, Info}, State) when Info =/= normal ->
+	{{MonitorRef, Key}, Monitors} = dict:take(Pid, State#state.monitors),
+	{Froms, Requests} = dict:take(Key, State#state.requests),
+	lists:foreach(fun(From) -> gen_server:reply(From, {error,Info}) end, Froms),
+	{noreply, State#state{ requests = Requests, monitors = Monitors }};
 handle_info(_Info, State) ->
 	{noreply, State}.
 
@@ -77,49 +121,98 @@ code_change(_OldVsn, State, _Extra) ->
 
 %%
 
-cache(_UA, _Result, _CacheSize, #state{ cache_size = 0 }) ->
+cache({_UA, _Result}, _State = #state{ cache_size = 0 }) ->
 	ok;
-cache(UA, Result, CacheSize, #state{ cache_size = X }) when X == unlimited; CacheSize < X ->
-	Result2 = lists:map(fun({O,R}) -> {pos(O), R} end, Result),
-	ets:insert_new(?MODULE, #cache{ key = UA }),
-	true = ets:update_element(?MODULE, UA, Result2),
-	ok;
-cache(UA, Result, CacheSize, State) ->
-	true = ets:delete(?MODULE, rkey(CacheSize)),
-	cache(UA, Result, CacheSize - 1, State).
+cache({UA, Result}, _State = #state{ cache_size = unlimited }) ->
+	{ElementSpec, Cache} = lists:mapfoldl(fun
+		(R = #uap_ua{}, C) ->
+			{{#cache.ua, R}, C#cache{ ua = R }};
+		(R = #uap_os{}, C) ->
+			{{#cache.os, R}, C#cache{ os = R }};
+		(R = #uap_device{}, C) ->
+			{{#cache.device, R}, C#cache{ device = R }}
+	end, #cache{ key = UA }, Result),
+	Inserted = ets:insert_new(?MODULE, Cache),
+	if
+		not Inserted ->
+			ets:update_element(?MODULE, UA, ElementSpec);
+		true ->
+			ok
+	end;
+cache(X = {_UA, _Result}, State) ->
+	spawn_link(fun() ->
+		Size = ets:info(?MODULE, size),
+		if
+			Size >= State#state.cache_size ->
+				Key = rkey(Size),
+				gen_server:cast(?MODULE, {cache_delete, Key});
+			true ->
+				ok
+		end
+	end),
+	cache(X, State#state{ cache_size = unlimited }).
 
 % http://erlang.org/pipermail/erlang-questions/2010-August/053051.html
-rkey(CacheSize) ->
-	I = rand:uniform(CacheSize),
-	case I > CacheSize/2 of
+rkey(Size) ->
+	true = ets:safe_fixtable(?MODULE, true),
+	I = rand:uniform(Size),
+	if
+		I > Size div 2 ->
+			rkey(ets:last(?MODULE), prev, I);
 		true ->
-			rkey(I, ets:last(?MODULE), prev);
-		false ->
-			rkey(I, ets:first(?MODULE), next)
+			rkey(ets:first(?MODULE), next, I)
 	end.
-rkey(0, K, _Direction) -> K;
-rkey(N, K, Direction) -> rkey(N - 1, ets:Direction(?MODULE, K), Direction).
+rkey(K, _Direction, 0) ->
+	true = ets:safe_fixtable(?MODULE, false),
+	K;
+rkey(K, Direction, N) ->
+	rkey(ets:Direction(?MODULE, K), Direction, N - 1).
 
 parse2(UA, Order) ->
-	Match = #cache{ key = UA, _ = '_' },
-	Order2 = lists:zip(Order, lists:seq(1, length(Order))),
-	Match2 = lists:foldl(fun({O,P}, M) ->
-		setelement(pos(O), M, list_to_atom("$" ++ integer_to_list(P)))
-	end, Match, Order2),
-	case ets:match(?MODULE, Match2) of
+	case ets:lookup(?MODULE, UA) of
 		[] ->
-			gen_server:call(?MODULE, {parse,UA,Order});
-		[Result] ->
-			Result2 = lists:zip(Order, Result),
-			lists:map(fun
-				({O,undefined}) ->
-					[R] = gen_server:call(?MODULE, {parse,UA,[O]}),
-					R;
-				({_O,R}) ->
-					R
-			end, Result2)
+			parse3(UA, Order);
+		[ResultCache] ->
+			{ResultCachePairs, Complete} = lists:mapfoldl(fun(T, C) ->
+				R = element(cache_pos(T), ResultCache),
+				{{R, T}, C andalso R =/= undefined}
+			end, true, Order),
+			Result = if
+				Complete ->
+					{Result0, _} = lists:unzip(ResultCachePairs),
+					Result0;
+				true ->
+					OrderMissing = lists:usort(lists:foldl(fun
+						({undefined, T}, O) ->
+							[T|O];
+						(_, O) ->
+							O
+					end, [], ResultCachePairs)),
+					ResultParse = parse3(UA, OrderMissing),
+					lists:foldr(fun
+						({undefined, T}, R) ->
+							{value, X} = lists:keysearch(uap_type(T), 1, ResultParse),
+							[X|R];
+						({X, _T}, R) ->
+							[X|R]
+					end, [], ResultCachePairs)
+			end,
+			{ok, Result}
 	end.
 
-pos(ua) -> #cache.ua;
-pos(os) -> #cache.os;
-pos(device) -> #cache.device.
+parse3(UA, Order) ->
+	try gen_server:call(?MODULE, {parse, UA, Order}) of
+		Result ->
+			Result
+	catch
+		_:Error ->
+			{error,Error}
+	end.
+
+cache_pos(ua) -> #cache.ua;
+cache_pos(os) -> #cache.os;
+cache_pos(device) -> #cache.device.
+
+uap_type(ua) -> uap_ua;
+uap_type(os) -> uap_os;
+uap_type(device) -> uap_device.

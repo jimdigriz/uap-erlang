@@ -16,21 +16,20 @@ all() ->
 groups() ->
 	[{list,[parallel],?TYPES},{binary,[parallel],?TYPES}].
 
-init_per_group(list, Config) ->
-	[{type,list}|Config];
-init_per_group(binary, Config) ->
-	[{type,binary}|Config].
+init_per_group(Type, Config) ->
+	application:ensure_all_started(yamerl),
+	DataDir = ?config(data_dir, Config),
+	{ok, UAP} = uap:state(file, filename:join([DataDir, "regexes.yaml"])),
+	[{uap,UAP},{type,Type}|Config].
 
 end_per_group(_, _Config) ->
 	ok.
 
 init_per_testcase(Test, Config) ->
-	application:ensure_all_started(yamerl),
 	DataDir = ?config(data_dir, Config),
-	{ok, UAP} = uap:state(file, filename:join([DataDir, "regexes.yaml"])),
 	[YAML] = yamerl_constr:file(filename:join([DataDir, atom_to_list(Test) ++ ".yaml"])),
 	Tests = proplists:get_value("test_cases", YAML),
-	[{uap,UAP},{tests,Tests}|Config].
+	[{tests,Tests}|Config].
 
 ua(Config) ->
 	Type = ?config(type, Config),

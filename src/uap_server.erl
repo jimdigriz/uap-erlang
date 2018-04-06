@@ -37,11 +37,11 @@
 start_link(Args) ->
 	gen_server:start_link({local,?MODULE}, ?MODULE, Args, []).
 
--spec parse(list() | binary()) -> list(uap_ua() | uap_os() | uap_device()).
-parse(UA) when is_list(UA); is_binary(UA) ->
+-spec parse(iodata()) -> list(uap_ua() | uap_os() | uap_device()).
+parse(UA) ->
 	parse(UA, [ua,os,device]).
--spec parse(list() | binary(), list(ua | os | device)) -> list(uap_ua() | uap_os() | uap_device()).
-parse(UA, Order) when (is_list(UA) orelse is_binary(UA)), is_list(Order) ->
+-spec parse(iodata(), list(ua | os | device)) -> list(uap_ua() | uap_os() | uap_device()).
+parse(UA, Order) when is_list(Order) ->
 	parse2(UA, Order).
 
 %% gen_server.
@@ -51,7 +51,7 @@ init(Args) ->
 	File = proplists:get_value(file, Args, ?DEFAULT_FILE),
 	CacheSize = proplists:get_value(cache, Args, ?DEFAULT_CACHE),
 	ets:new(?MODULE, [named_table,{keypos,#cache.key},{read_concurrency,true}]),
-	{ok, UAP} = uap:state({file,filename:join([code:priv_dir(Priv), File])}),
+	{ok, UAP} = uap:state(file, filename:join([code:priv_dir(Priv), File])),
 	{ok, #state{ uap = UAP, cache_size = CacheSize }}.
 
 handle_call({parse, UA, Order}, _From, State = #state{ uap = UAP }) ->
@@ -123,5 +123,3 @@ parse2(UA, Order) ->
 pos(ua) -> #cache.ua;
 pos(os) -> #cache.os;
 pos(device) -> #cache.device.
-
-

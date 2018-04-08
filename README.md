@@ -99,9 +99,8 @@ Supported properties are:
 
  * **`normalize` (default: false):**
    * improves the effectiveness of the cache
-   * recommended only when the cardinality of user-agents is high
+   * recommended only when the cardinality of User-Agents is high
    * suitable for use *only* require `#uap_{ua,os}.{family,major}`
-   * ignored when `start_link/1` is called with `{cache,0}`
 
 An an error is returned if you duplicate any of the atoms `ua` `os` or `device` in the list of results to return.
 

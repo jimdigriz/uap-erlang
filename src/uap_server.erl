@@ -13,6 +13,10 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
+-define(DEFAULT_PRIV, uap).
+-define(DEFAULT_FILE, "regexes.yaml").
+-define(DEFAULT_CACHE, 1000).
+
 -define(PARTITIONS, 10).
 
 -include("uap.hrl").
@@ -31,10 +35,6 @@
 	os				:: uap_os(),
 	device				:: uap_device()
 }).
-
--define(DEFAULT_PRIV, uap).
--define(DEFAULT_FILE, "regexes.yaml").
--define(DEFAULT_CACHE, 1000).
 
 %% API.
 

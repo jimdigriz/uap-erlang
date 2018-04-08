@@ -24,12 +24,14 @@ From a `make all shell` you should be able to just run:
     UA = "Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0",
     uap:parse(UA, UAP).
     
-    [#uap_ua{family = "Firefox",major = "55",minor = "0",
+    {ok, [
+       #uap_ua{family = "Firefox",major = "55",minor = "0",
              patch = undefined},
-     #uap_os{family = "Linux",major = undefined,minor = undefined,
+       #uap_os{family = "Linux",major = undefined,minor = undefined,
              patch = undefined,patch_minor = undefined},
-     #uap_device{family = "Other",brand = undefined,
-                 model = undefined}]
+       #uap_device{family = "Other",brand = undefined,
+                 model = undefined}
+    ]}
 
 ## Standalone Server
 
@@ -39,11 +41,13 @@ From a `make all shell` you should be able to just run:
     {ok, _} = uap_server:start_link(Args).
     uap_server:parse(UA, [os]).
 
+**N.B** an error is returned if you duplicate any of the atoms `ua` `os` or `device` in the list
+
 Supported configuration arguments are:
 
  * **`priv` (default: `uap`):** application name for the `priv` directory where `regexes.yaml` is located
  * **`file` (default: `regexes.yaml`):** name of the regexes file to load
- * **`cache` (default: 1000):** number of entries for the lookup cache (can also be `0` for disabled and `unlimited`)
+ * **`cache` (default: 10000):** number of entries for the lookup cache (can also be `0` for disabled and `unlimited`)
 
 ## Application
 
@@ -68,11 +72,13 @@ Add to your `Makefile`:
 
 Loads in YAML in the [expected format](https://github.com/ua-parser/uap-core/blob/master/docs/specification.md) from either a provided filepath or in-memory string.
 
-### `parse(iodata(), uap()) -> [uap_ua() | uap_os() | uap_device()]`
+Throws on error.
+
+### `parse(iodata(), uap()) -> {ok, [uap_ua() | uap_os() | uap_device()]} | {error,atom()}`
 
 Same as `parse(iodata(), [ua, os, device], uap())`.
 
-### `parse(iodata(), Order, uap()) -> [uap_ua() | uap_os() | uap_device()]`
+### `parse(iodata(), Order, uap()) -> {ok, [uap_ua() | uap_os() | uap_device()]} | {error,atom()}`
 
 Parses the User-Agent in passed in as the string `UA`.
 
@@ -84,6 +90,10 @@ Fetch a copy of the [test data](https://github.com/ua-parser/uap-core/blob/maste
 
     make testdata
 
-Now run the tests with:
+Now run the tests (takes about five minutes and needs 4GB of RAM) with:
 
     make tests
+
+If you just want to test the `uap-core` test data (takes about 30 seconds and needs 4GB of RAM) use:
+
+    make tests CT_SUITES=uap

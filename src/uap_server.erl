@@ -15,7 +15,7 @@
 
 -define(DEFAULT_PRIV, uap).
 -define(DEFAULT_FILE, "regexes.yaml").
--define(DEFAULT_CACHE, 1000).
+-define(DEFAULT_CACHE, 10000).
 
 -define(PARTITIONS, 10).
 

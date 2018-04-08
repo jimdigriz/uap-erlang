@@ -64,7 +64,7 @@ parse(UA0, Order) when is_list(UA0), is_list(Order) ->	% binary re is faster
 	end;
 parse(UA, Order) when is_binary(UA), is_list(Order), length(Order) > 0 ->
 	Valid = length(Order) == length(lists:usort(Order)),
-	if Valid -> parse2(UA, Order, ets:lookup(?MODULE, key(UA))); true -> {error,duplicate} end.
+	if Valid -> parse2(UA, Order, catch ets:lookup(?MODULE, key(UA))); true -> {error,duplicate} end.
 
 %% gen_server.
 
@@ -139,7 +139,9 @@ parse2(UA, Order, [ResultCache]) ->
 		end,
 		{{T, R}, X}
 	end, {true, []}, Order),
-	parse3(UA, Order, Tuple).
+	parse3(UA, Order, Tuple);
+parse2(_UA, _Order, {'EXIT',{badarg,_}}) ->
+	{error,noproc}.
 
 parse3(_UA, _Order, {ResultCachePairs, {true, _OrderMissing}}) ->
 	{_, Result} = lists:unzip(ResultCachePairs),

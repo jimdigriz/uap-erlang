@@ -100,7 +100,7 @@ Supported properties are:
  * **`normalize` (default: false):**
    * improves the effectiveness of the cache
    * recommended only when the cardinality of User-Agents is high
-   * suitable for use *only* when you require `#uap_{ua,os}.{family,major} as it is inaccurate for all other fields!
+   * suitable for use *only* when you require `#uap_{ua,os}.{family,major}` as it is inaccurate for all other fields!
 
 An an error is returned if you duplicate any of the atoms `ua` `os` or `device` in the list of results to return.
 

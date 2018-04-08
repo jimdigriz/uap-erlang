@@ -147,13 +147,12 @@ parse3(_UA, _Order, {ResultCachePairs, {true, _OrderMissing}}) ->
 parse3(UA, _Order, {ResultCachePairs, {false, OrderMissing}}) ->
 	case parse_real(UA, OrderMissing) of
 		{ok, ResultParse} ->
-			Result = lists:foldr(fun
-				({T, undefined}, R) ->
-					{value, X} = lists:keysearch(uap_type(T), 1, ResultParse),
-					[X|R];
-				({_T, X}, R) ->
-					[X|R]
-			end, [], ResultCachePairs),
+			Result = lists:map(fun
+				({T, undefined}) ->
+					lists:keyfind(uap_type(T), 1, ResultParse);
+				({_T, X}) ->
+					X
+			end, ResultCachePairs),
 			{ok, Result};
 		Else ->
 			Else

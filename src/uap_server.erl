@@ -74,7 +74,7 @@ parse(UA0, Order, Options) when is_binary(UA0), is_list(Order), is_list(Options)
 			Normalize = proplists:get_value(normalize, Options, false),
 			UA = if
 				Normalize ->
-					uap_normlize:process(UA0);
+					uap_normalize:process(UA0);
 				true ->
 					UA0
 			end,

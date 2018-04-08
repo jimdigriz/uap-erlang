@@ -13,6 +13,8 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
+-define(PARTITIONS, 10).
+
 -include("uap.hrl").
 
 -record(state, {
@@ -24,7 +26,7 @@
 }).
 
 -record(cache, {
-	key				:: binary(),
+	key				:: {non_neg_integer(), binary()},
 	ua				:: uap_ua(),
 	os				:: uap_os(),
 	device				:: uap_device()
@@ -40,7 +42,7 @@
 start_link(Args) ->
 	gen_server:start_link({local,?MODULE}, ?MODULE, Args, []).
 
--spec parse(iodata()) -> {ok, list(uap_ua() | uap_os() | uap_device())} | {error, any()}.
+-spec parse(iodata()) -> {ok, list(uap_ua() | uap_os() | uap_device())} | {error,any()}.
 parse(UA) ->
 	parse(UA, [ua, os, device]).
 -spec parse(iodata(), list(ua | os | device)) -> {ok, list(uap_ua() | uap_os() | uap_device())} | {error, any()}.
@@ -60,8 +62,9 @@ parse(UA0, Order) when is_list(UA0), is_list(Order) ->	% binary re is faster
 		Else ->
 			Else
 	end;
-parse(UA, Order) when is_binary(UA), is_list(Order) ->
-	parse2(UA, Order).
+parse(UA, Order) when is_binary(UA), is_list(Order), length(Order) > 0 ->
+	Valid = length(Order) == length(lists:usort(Order)),
+	if Valid -> parse2(UA, Order, ets:lookup(?MODULE, key(UA))); true -> {error,duplicate} end.
 
 %% gen_server.
 
@@ -69,12 +72,12 @@ init(Args) ->
 	Priv = proplists:get_value(priv, Args, ?DEFAULT_PRIV),
 	File = proplists:get_value(file, Args, ?DEFAULT_FILE),
 	CacheSize = proplists:get_value(cache, Args, ?DEFAULT_CACHE),
-	ets:new(?MODULE, [named_table,{keypos,#cache.key},{read_concurrency,true}]),
+	ets:new(?MODULE, [named_table,ordered_set,{keypos,#cache.key},{read_concurrency,true}]),
 	{ok, UAP} = uap:state(file, filename:join([code:priv_dir(Priv), File])),
 	{ok, #state{ uap = UAP, cache_size = CacheSize }}.
 
 handle_call({parse, UA, Order}, From, State) ->
-	Key = {UA, lists:usort(Order)},
+	Key = {UA, Order},
 	Duplicate = dict:is_key(Key, State#state.requests),
 	Monitors = if
 		Duplicate ->
@@ -92,16 +95,13 @@ handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
 handle_cast({parse, Pid, UA, Order, Result}, State) ->
-	Key = {UA, lists:usort(Order)},
+	Key = {UA, Order},
 	{Froms, Requests} = dict:take(Key, State#state.requests),
-	{{MonitorRef, Key}, Monitors} = dict:take(Pid, State#state.monitors),
 	lists:foreach(fun(From) -> gen_server:reply(From, {ok, Result}) end, Froms),
+	{{MonitorRef, Key}, Monitors} = dict:take(Pid, State#state.monitors),
 	demonitor(MonitorRef, [flush]),
 	cache({UA, Result}, State),
 	{noreply, State#state{ requests = Requests, monitors = Monitors }};
-handle_cast({cache_delete, Key}, State) ->
-	true = ets:delete(?MODULE, Key),
-	{noreply, State};
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
@@ -121,39 +121,45 @@ code_change(_OldVsn, State, _Extra) ->
 
 %%
 
-parse2(UA, Order) ->
-	case ets:lookup(?MODULE, UA) of
-		[] ->
-			parse3(UA, Order);
-		[ResultCache] ->
-			{ResultCachePairs, Complete} = lists:mapfoldl(fun(T, C) ->
-				R = element(cache_pos(T), ResultCache),
-				{{R, T}, C andalso R =/= undefined}
-			end, true, Order),
-			Result = if
-				Complete ->
-					{Result0, _} = lists:unzip(ResultCachePairs),
-					Result0;
-				true ->
-					OrderMissing = lists:usort(lists:foldl(fun
-						({undefined, T}, O) ->
-							[T|O];
-						(_, O) ->
-							O
-					end, [], ResultCachePairs)),
-					{ok, ResultParse} = parse3(UA, OrderMissing),
-					lists:foldr(fun
-						({undefined, T}, R) ->
-							{value, X} = lists:keysearch(uap_type(T), 1, ResultParse),
-							[X|R];
-						({X, _T}, R) ->
-							[X|R]
-					end, [], ResultCachePairs)
-			end,
-			{ok, Result}
+% http://erlang.2086793.n4.nabble.com/ranged-lookup-on-ordered-set-ETS-td3717828.html
+% ordered_set so the match_delete in effect becomes a ranged delete (2x faster)
+key(UA) ->
+	{erlang:phash2(UA, ?PARTITIONS), UA}.
+
+parse2(UA, Order, []) ->
+	parse_real(UA, Order);
+parse2(UA, Order, [ResultCache]) ->
+	Tuple = {_ResultCachePairs, {_Complete, _OrderMissing}} = lists:mapfoldl(fun(T, {C0,O0}) ->
+		R = element(cache_pos(T), ResultCache),
+		X = {_C, _O} = if
+			R == undefined ->
+				{false, [T|O0]};
+			true ->
+				{C0, O0}
+		end,
+		{{T, R}, X}
+	end, {true, []}, Order),
+	parse3(UA, Order, Tuple).
+
+parse3(_UA, _Order, {ResultCachePairs, {true, _OrderMissing}}) ->
+	{_, Result} = lists:unzip(ResultCachePairs),
+	{ok, Result};
+parse3(UA, _Order, {ResultCachePairs, {false, OrderMissing}}) ->
+	case parse_real(UA, OrderMissing) of
+		{ok, ResultParse} ->
+			Result = lists:foldr(fun
+				({T, undefined}, R) ->
+					{value, X} = lists:keysearch(uap_type(T), 1, ResultParse),
+					[X|R];
+				({_T, X}, R) ->
+					[X|R]
+			end, [], ResultCachePairs),
+			{ok, Result};
+		Else ->
+			Else
 	end.
 
-parse3(UA, Order) ->
+parse_real(UA, Order) ->
 	try gen_server:call(?MODULE, {parse, UA, Order}) of
 		Result ->
 			Result
@@ -173,6 +179,7 @@ uap_type(device) -> uap_device.
 cache({_UA, _Result}, _State = #state{ cache_size = 0 }) ->
 	ok;
 cache({UA, Result}, _State = #state{ cache_size = unlimited }) ->
+	Key = key(UA),
 	{ElementSpec, Cache} = lists:mapfoldl(fun
 		(R = #uap_ua{}, C) ->
 			{{#cache.ua, R}, C#cache{ ua = R }};
@@ -180,39 +187,21 @@ cache({UA, Result}, _State = #state{ cache_size = unlimited }) ->
 			{{#cache.os, R}, C#cache{ os = R }};
 		(R = #uap_device{}, C) ->
 			{{#cache.device, R}, C#cache{ device = R }}
-	end, #cache{ key = UA }, Result),
+	end, #cache{ key = Key }, Result),
 	Inserted = ets:insert_new(?MODULE, Cache),
 	if
 		not Inserted ->
-			ets:update_element(?MODULE, UA, ElementSpec);
+			ets:update_element(?MODULE, Key, ElementSpec);
 		true ->
 			ok
 	end;
 cache(X = {_UA, _Result}, State) ->
-	spawn_link(fun() ->
-		Size = ets:info(?MODULE, size),
-		if
-			Size >= State#state.cache_size ->
-				Key = rkey(Size),
-				gen_server:cast(?MODULE, {cache_delete, Key});
-			true ->
-				ok
-		end
-	end),
-	cache(X, State#state{ cache_size = unlimited }).
-
-% http://erlang.org/pipermail/erlang-questions/2010-August/053051.html
-rkey(Size) ->
-	true = ets:safe_fixtable(?MODULE, true),
-	I = rand:uniform(Size),
+	Size = ets:info(?MODULE, size),
 	if
-		I > Size div 2 ->
-			rkey(ets:last(?MODULE), prev, I);
+		Size >= State#state.cache_size ->
+			Partition = rand:uniform(?PARTITIONS) - 1,
+			true = ets:match_delete(?MODULE, #cache{ key = {Partition,'_'}, _ = '_' });
 		true ->
-			rkey(ets:first(?MODULE), next, I)
-	end.
-rkey(K, _Direction, 0) ->
-	true = ets:safe_fixtable(?MODULE, false),
-	K;
-rkey(K, Direction, N) ->
-	rkey(ets:Direction(?MODULE, K), Direction, N - 1).
+			ok
+	end,
+	cache(X, State#state{ cache_size = unlimited }).

@@ -37,17 +37,8 @@ From a `make all shell` you should be able to just run:
 
     application:ensure_all_started(yamerl),
     rr(uap).
-    Args = [],	% [{priv,uap},{file,"regexes.yaml"}]
-    {ok, _} = uap_server:start_link(Args).
+    {ok, _} = uap_server:start_link().
     uap_server:parse(UA, [os]).
-
-**N.B** an error is returned if you duplicate any of the atoms `ua` `os` or `device` in the list
-
-Supported configuration arguments are:
-
- * **`priv` (default: `uap`):** application name for the `priv` directory where `regexes.yaml` is located
- * **`file` (default: `regexes.yaml`):** name of the regexes file to load
- * **`cache` (default: 10000):** number of entries for the lookup cache (can also be `0` for disabled and `unlimited`)
 
 ## Application
 
@@ -66,7 +57,7 @@ Add to your `Makefile`:
 
 # API
 
-## `uap` library
+## Library
 
 ### `state(file | string, iodata()) -> {ok, uap()}`
 
@@ -83,6 +74,36 @@ Same as `parse(iodata(), [ua, os, device], uap())`.
 Parses the User-Agent in passed in as the string `UA`.
 
 **N.B.** from the unit tests, it seems that parsing binaries is faster than lists
+
+## Server/Application
+
+### `start_link()`
+
+Same as `start_link([])`.
+
+### `start_link(list(proplists:property()))`
+
+Supported configuration properties are:
+
+ * **`priv` (default: `uap`):** application name for the `priv` directory where `regexes.yaml` is located
+ * **`file` (default: `regexes.yaml`):** name of the regexes file to load
+ * **`cache` (default: 10000):** number of entries for the lookup cache (can also be `0` for disabled and `unlimited`)
+
+### `parse(iodata(), list(ua | os | device))` -> {ok, [uap_ua() | uap_os() | uap_device()]} | {error,atom()}`
+
+Same as `parse(iodata(), list(ua | os | device), [])`.
+
+### `parse(iodata(), list(ua | os | device), list(proplists:property()))` -> {ok, [uap_ua() | uap_os() | uap_device()]} | {error,atom()}`
+
+Supported properties are:
+
+ * **`normalize` (default: false):**
+   * improves the effectiveness of the cache
+   * recommended only when the cardinality of user-agents is high
+   * suitable for use *only* require `#uap_{ua,os}.{family,major}`
+   * ignored when `start_link/1` is called with `{cache,0}`
+
+An an error is returned if you duplicate any of the atoms `ua` `os` or `device` in the list of results to return.
 
 # Testing
 

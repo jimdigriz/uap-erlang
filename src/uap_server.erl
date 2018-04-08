@@ -2,8 +2,8 @@
 -behaviour(gen_server).
 
 %% API.
--export([start_link/1]).
--export([parse/1, parse/2]).
+-export([start_link/0, start_link/1]).
+-export([parse/2, parse/3]).
 
 %% gen_server.
 -export([init/1]).
@@ -38,17 +38,22 @@
 
 %% API.
 
--spec start_link(list()) -> {ok, pid()}.
+-spec start_link() -> {ok, pid()}.
+start_link() ->
+	start_link([]).
+
+-spec start_link(list(proplists:property())) -> {ok, pid()}.
 start_link(Args) ->
 	gen_server:start_link({local,?MODULE}, ?MODULE, Args, []).
 
--spec parse(iodata()) -> {ok, list(uap_ua() | uap_os() | uap_device())} | {error,any()}.
-parse(UA) ->
-	parse(UA, [ua, os, device]).
 -spec parse(iodata(), list(ua | os | device)) -> {ok, list(uap_ua() | uap_os() | uap_device())} | {error, any()}.
-parse(UA0, Order) when is_list(UA0), is_list(Order) ->	% binary re is faster
+parse(UA0, Order) ->
+	parse(UA0, Order, []).
+
+-spec parse(iodata(), list(ua | os | device), list(proplists:property())) -> {ok, list(uap_ua() | uap_os() | uap_device())} | {error, any()}.
+parse(UA0, Order, Options) when is_list(UA0), is_list(Order), is_list(Options) ->	% binary re is faster
 	UA = unicode:characters_to_binary(UA0),
-	case parse(UA, Order) of
+	case parse(UA, Order, Options) of
 		{ok, Result0} ->
 			Result = lists:map(fun(R) ->
 				list_to_tuple(lists:map(fun
@@ -62,10 +67,17 @@ parse(UA0, Order) when is_list(UA0), is_list(Order) ->	% binary re is faster
 		Else ->
 			Else
 	end;
-parse(UA, Order) when is_binary(UA), is_list(Order), length(Order) > 0 ->
+parse(UA0, Order, Options) when is_binary(UA0), is_list(Order), is_list(Options) ->
 	Valid = length(Order) == length(lists:usort(Order)),
 	if
 		Valid ->
+			Normalize = proplists:get_value(normalize, Options, false),
+			UA = if
+				Normalize ->
+					uap_normlize:process(UA0);
+				true ->
+					UA0
+			end,
 			parse2(UA, Order, catch ets:lookup(?MODULE, key(UA)));
 		true ->
 			{error,duplicate}

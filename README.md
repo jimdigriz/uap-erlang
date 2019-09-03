@@ -35,9 +35,8 @@ From a `make all shell` you should be able to just run:
 
 ## Standalone Server
 
-    application:ensure_all_started(yamerl),
+    application:ensure_all_started(uap),
     rr(uap).
-    {ok, _} = uap_server:start_link().
     uap_server:parse(UA, [os]).
 
 ## Application

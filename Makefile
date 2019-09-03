@@ -29,4 +29,4 @@ test/uap_normalize_SUITE_data/list.gz: priv/list.gz test/uap_normalize_SUITE_dat
 	ln -f -s ../../$< $@
 
 test/uap_SUITE_data/%.yaml:
-	curl -f --compressed -L -o $@ https://raw.githubusercontent.com/ua-parser/uap-core/master/tests/test_$(notdir $@)
+	curl -f --compressed -L -o $@ https://raw.githubusercontent.com/ua-parser/uap-core/master/tests/test_$(@F)

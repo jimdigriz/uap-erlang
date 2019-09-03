@@ -14,7 +14,7 @@
 -type uap() :: #uap{}.
 
 -record(uap_re, {
-	re	:: tuple(),
+	mp	:: re:mp(),
 	replace	:: list()
 }).
 
@@ -42,7 +42,7 @@ state(Source, Pointer) when Source == file; Source == string ->
 			Replace = lists:map(fun(FF) ->
 				proplists:get_value(FF, PL)
 			end, F),
-			#uap_re{ re = MP, replace = Replace }
+			#uap_re{ mp = MP, replace = Replace }
 		end, REs)
 	end, ?UAP_MAP),
 	{ok, list_to_tuple([uap|UAP])}.
@@ -78,7 +78,7 @@ uap_size(device) -> record_info(size, uap_device).
 
 parse2(_UA, _Type, []) ->
 	nomatch;
-parse2(UA, Type, [RE = #uap_re{ re = MP }|REs]) ->
+parse2(UA, Type, [RE = #uap_re{ mp = MP }|REs]) ->
 	Match = re:run(UA, MP, [{capture,all_but_first,list}]),
 	parse3(UA, Type, REs, RE, Match).
 
